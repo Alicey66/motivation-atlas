@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseNote } from "../src/content/parse-note";
-import { minigames } from "../src/minigames/registry";
+import { minigames, minigamesByFolder } from "../src/minigames/registry";
 import { template } from "../src/minigames/_template";
 import type { Minigame } from "../src/minigames/types";
 
@@ -36,6 +36,18 @@ function checkContract(game: Minigame, folder: string): void {
 }
 
 describe("registered minigames", () => {
+  it("come one from each minigame folder, with the folder's name as slug", () => {
+    const folders = readdirSync("src/minigames", { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith("_") && existsSync(`src/minigames/${d.name}/index.ts`))
+      .map((d) => d.name);
+    expect(folders.length).toBeGreaterThan(0);
+    for (const folder of folders) {
+      const games = minigamesByFolder[folder] ?? [];
+      expect(games.length, `src/minigames/${folder}/index.ts must export exactly one minigame`).toBe(1);
+      expect(games[0].slug, `src/minigames/${folder}/index.ts: set slug to "${folder}"`).toBe(folder);
+    }
+  });
+
   it("have unique slugs that match their folders", () => {
     const slugs = minigames.map((g) => g.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
