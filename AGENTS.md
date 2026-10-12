@@ -83,11 +83,11 @@ with `git switch -` (or `git switch your-github-username/short-topic`).
 | `content/proposals.json` | Student readings: a game, a motivator, the mechanic and the dynamic | Yes |
 | `content/videos.csv` | Playthrough videos, one row per video | Yes |
 | `content/sources.csv` | Where a citation's link should go, when the bibliography's link is not the best one | Yes |
-| `src/minigames/` | One folder per minigame, plus `src/minigames/registry.ts` | Yes, your own folder and one line in the registry |
+| `src/minigames/` | One folder per minigame. `src/minigames/registry.ts` finds every folder on its own. | Yes, your own folder only |
 | `src/minigames/_template/` | A tiny working minigame to copy | Copy it; do not edit it |
 | `src/pages/` | The map, motivator pages, note and about pages | Yes, for look and interaction improvements |
 | `src/content/` | Parsing and checking the content | Rarely; talk to the instructor first |
-| `test/` | Tests. `npm test` runs them all. | Add tests for what you build |
+| `test/` | Tests. `npm test` runs every file here, and only files here. | Add tests for what you build, in `test/<your-slug>.test.ts` |
 
 ## Things to make
 
@@ -184,9 +184,13 @@ code, its rules engine and its README.
    **Dynamic**, **Aesthetic** and **Sources** (the note's items your game
    demonstrates, quoted with their citations) appear below the game under
    "What it demonstrates".
-4. Add one line to `src/minigames/registry.ts`: import your game and add
-   it to the `minigames` list.
-5. Run `npm test`, then play it on its motivator's page.
+4. Write tests for your rules in `test/<your-slug>.test.ts`. `npm test`
+   collects test files only from `test/`, so a test saved inside your
+   minigame's folder never runs. Pig's are `test/pig-game.test.ts` and
+   `test/pig-ui.test.ts`.
+5. Run `npm test`, then play it on its motivator's page. The Atlas finds
+   your folder on its own; a test fails if `index.ts` exports no minigame
+   or if its `slug` differs from the folder name.
 
 **The contract** (a test checks it):
 
@@ -207,8 +211,8 @@ code, its rules engine and its README.
   example. The sources say what tends to emerge; the player's own account is
   the evidence that tests it.
 - Put the rules in their own file with no DOM code (Pig's is
-  `src/minigames/pig/game.ts`) and test them, so your agent can change
-  the rules without breaking the page.
+  `src/minigames/pig/game.ts`) and test them in `test/<your-slug>.test.ts`,
+  so your agent can change the rules without breaking the page.
 
 **Ideas, one per motivator, from the note's own mechanics and dynamics:**
 
@@ -241,8 +245,8 @@ one.
 - Start your agent in this folder so it reads this file.
 - Ask it for a plan before code: which files it will touch, and how you will
   see the result.
-- Keep a minigame inside its own folder. The only other file it needs is one
-  line in `src/minigames/registry.ts`.
+- Keep a minigame inside its own folder. The only other file it needs is
+  its test file, `test/<your-slug>.test.ts`.
 - Your agent must not edit `content/player-motivations.md`, the `ties`
   in `content/games.json`, or anyone else's minigame.
 - Run `npm test` before every push. If a test fails, read its message; most

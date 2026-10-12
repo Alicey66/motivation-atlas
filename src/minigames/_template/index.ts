@@ -2,7 +2,7 @@ import { h } from "../../lib/dom";
 import type { Minigame } from "../types";
 
 // Copy this folder to src/minigames/<your-slug>/, change the fields at the bottom,
-// write your README, and add one line for it in ../registry.ts.
+// and write your README. The Atlas finds the new folder on its own.
 
 function mount(el: HTMLElement): () => void {
   let points = 0;
