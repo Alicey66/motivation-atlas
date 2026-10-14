@@ -26,7 +26,7 @@ export function createGame(fog: boolean): Game {
       {x:6.5,y:16.5,open:false,name:"Wayfarer boots",story:"Boost unlocked! Hold Shift while moving. Release Shift to recharge, walking or standing."},
       {x:8.5,y:8.5,open:false,name:"Star chart",story:"The chart marks a route through the northern ruins."},
       {x:24.5,y:10.5,open:false,name:"Copper bell",story:"A bell once used to guide travelers home."},
-      {x:34.5,y:18.5,open:false,name:"Treasure map",story:"The map points to one uncollected star at a time."},
+      {x:34.5,y:18.5,open:false,name:"Treasure map",story:"The map marks remaining stars. Find them to reveal the remaining chests."},
       {x:14.5,y:15.5,open:false,name:"Lantern oil",story:"A flask left by an earlier traveler."},
       {x:27.5,y:21.5,open:false,name:"Wayfinder token",story:"A mark of safe passage."},
       {x:2.5,y:3.5,open:false,rare:true,name:"North star",story:"A rare star relic tucked into the far corner."},
@@ -112,16 +112,31 @@ export function interact(g: Game): void {
   g.message=g.finished ? "Both outposts are lit. Outposts secured! Claim the treasure map nearby and keep exploring." : "Outpost opened! Your torch reaches farther. A new destination is on the compass.";
 }
 
-export function shouldShowCompass(g: Game): boolean {
-  const target=compassTarget(g);
+export function shouldShowCompass(g: Game, target:Point|undefined=compassTarget(g)): boolean {
   if(!target)return false;
   const inViewport=Math.abs(target.x-g.player.x)<8 && Math.abs(target.y-g.player.y)<6;
-  return !inViewport || visibility(g,Math.floor(target.x),Math.floor(target.y))==="hidden";
+  const marked=questStage(g)!=="outposts"&&navigationTargets(g).includes(target);
+  return !inViewport || (!marked&&visibility(g,Math.floor(target.x),Math.floor(target.y))==="hidden");
 }
-export function compassTarget(g: Game): Point | undefined {
-  return g.outposts.find(p=>!p.open) ?? (g.treasureMap?g.chests.find(c=>c.rare&&!c.open):undefined);
-}
+export function compassTarget(g: Game): Point | undefined {return navigationTargets(g)[0];}
 export function hasEverything(g: Game): boolean {return g.outposts.every(p=>p.open)&&g.chests.every(c=>c.open);}
 function recordFinalCompletion(g:Game):void {
   if(hasEverything(g)&&!g.finalCompletion)g.finalCompletion={elapsed:g.elapsed,distance:g.distance,chests:g.chests.length};
+}
+
+export type QuestStage="outposts"|"map"|"stars"|"chests"|"complete";
+export function questStage(g:Game):QuestStage {
+  if(!g.outposts.every(p=>p.open))return "outposts";
+  if(!g.treasureMap)return "map";
+  if(g.chests.some(c=>c.rare&&!c.open))return "stars";
+  return g.chests.some(c=>!c.open)?"chests":"complete";
+}
+export function navigationTargets(g:Game):Point[] {
+  switch(questStage(g)) {
+    case "outposts": {const p=g.outposts.find(p=>!p.open);return p?[p]:[];}
+    case "map":return [g.chests[3]];
+    case "stars":return g.chests.filter(c=>c.rare&&!c.open);
+    case "chests":return g.chests.filter(c=>!c.rare&&!c.open);
+    case "complete":return [];
+  }
 }

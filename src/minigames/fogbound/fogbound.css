@@ -56,3 +56,5 @@
 @media(prefers-reduced-motion:reduce) { .fog-final-win { animation:none; } }
 
 @keyframes fog-final-reveal { from {opacity:0;transform:translate(-50%,-50%) scale(.8);} to {opacity:1;transform:translate(-50%,-50%) scale(1);} }
+
+.fog-quest { border-top:1px solid #73859166;margin-top:5px;padding-top:5px;color:#f5d99c;font-weight:600; }

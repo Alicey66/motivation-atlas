@@ -1,6 +1,6 @@
 import { h, s } from "../../lib/dom";
 import type { Minigame } from "../types";
-import { createGame, move, interact, radius, visibility, WORLD, shouldShowCompass, compassTarget, hasEverything } from "./game";
+import { createGame, move, interact, radius, visibility, WORLD, shouldShowCompass, hasEverything, questStage, navigationTargets } from "./game";
 import "./fogbound.css";
 
 function mount(el: HTMLElement): () => void {
@@ -19,7 +19,9 @@ function mount(el: HTMLElement): () => void {
   const svg=s("svg",{viewBox:"0 0 16 12","aria-hidden":"true",class:"fog-world"});
   const hud=h("div",{class:"fog-hud"});
   const collected=h("progress",{max:8,value:0,"aria-label":"Collected treasures"});
-  const hudText=h("span",{});hud.append(hudText,collected);
+  const hudText=h("span",{});
+  const quest=h("div",{class:"fog-quest","data-quest":""});
+  hud.append(hudText,collected,quest);
   const boostMeter=h("progress",{max:100,value:100,"aria-label":"Boost energy"});
   const boostReadout=h("span",{});
   const boostHud=h("div",{class:"fog-boost-hud",hidden:true},boostReadout,boostMeter);
@@ -65,7 +67,7 @@ function mount(el: HTMLElement): () => void {
   const root=h("div",{class:"fogbound"},
     h("header",{class:"fog-heading"},h("div",{},h("h3",{},"Fogbound"),h("p",{},"Leave a light. Find what lies between.")),
       h("label",{class:"fog-toggle"},fog," Fog of war")),
-    h("p",{class:"fog-instructions"},"Open chests for supplies. Each outpost uses 1 supply and takes 3 pulses. Find 8 treasures, including 2 hidden stars. WASD / arrows: move · Space / E: interact. Mouse and touch: hold direction buttons."),
+    h("p",{class:"fog-instructions"},"Open chests for supplies. Each outpost uses 1 supply and takes 3 pulses. Follow your current quest and discover what comes next. WASD / arrows: move · Space / E: interact. Mouse and touch: hold direction buttons."),
     board,counts,status,
     h("div",{class:"fog-controls"},pad,h("div",{class:"fog-actions"},action,boostButton,start,pause)),legend,h("details",{},h("summary",{},"Collected relics"),journal),reflection);
   el.append(root);
@@ -84,7 +86,10 @@ function mount(el: HTMLElement): () => void {
       }
     });
     entities.replaceChildren();
-    hudText.textContent=`Treasures ${game.chests.filter(c=>c.open).length}/${game.chests.length} · Supplies ${game.supplies} · Outposts ${game.outposts.filter(p=>p.open).length}/2`;
+    const stage=questStage(game),targets=navigationTargets(game);
+    const questLabels={outposts:`Open outposts ${game.outposts.filter(p=>p.open).length}/2`,map:"Claim the treasure map",stars:"Find the star relics",chests:"Open the remaining chests",complete:"Exploration complete"};
+    quest.textContent=`Quest: ${questLabels[stage]}`;
+    hudText.textContent=`Supplies ${game.supplies} · Discoveries ${game.chests.filter(c=>c.open).length}`;
     collected.value=game.chests.filter(c=>c.open).length;
     boostHud.hidden=!game.boostUnlocked;boostButton.hidden=!game.boostUnlocked;
     boostButton.disabled=!running||paused;
@@ -124,14 +129,14 @@ function mount(el: HTMLElement): () => void {
       marker.setAttribute("opacity",v==="memory"?"0.45":"1"); entities.append(marker);
     }
     for(const c of game.chests) {
-      const v=visibility(game,Math.floor(c.x),Math.floor(c.y)); if(v==="hidden") continue;
-      const marker=s("g",{opacity:v==="memory"?0.4:1},
+      const v=visibility(game,Math.floor(c.x),Math.floor(c.y)); if(v==="hidden"&&!targets.includes(c)) continue;
+      const marker=s("g",{opacity:v==="memory"&&!targets.includes(c)?0.4:1},
         c.rare?s("text",{x:c.x,y:c.y+0.2,"text-anchor":"middle","font-size":0.65,fill:c.open?"#625b48":"#f5c975"},"★"):s("rect",{x:c.x-0.25,y:c.y-0.18,width:0.5,height:0.36,rx:0.04,fill:c.open?"#625b48":"#f5c975",stroke:"#f5d99c","stroke-width":0.04}),
         s("text",{x:c.x,y:c.y+0.65,"text-anchor":"middle","font-size":0.25,fill:"#ffe1a2"},c.open?c.name:c.rare?"★ Star relic":"Chest")); entities.append(marker);
     }
     compass.replaceChildren();
-    const target=compassTarget(game);
-    if(target && shouldShowCompass(game)) {
+    for(const target of targets) {
+    if(shouldShowCompass(game,target)) {
       const dx=target.x-game.player.x,dy=target.y-game.player.y;
       const scale=Math.max(Math.abs(dx)/6.7,Math.abs(dy)/4.7,1);
       const x=8+dx/scale,y=6+dy/scale,angle=Math.atan2(dy,dx)*180/Math.PI;
@@ -139,15 +144,17 @@ function mount(el: HTMLElement): () => void {
       const offscreen=scale>1;
       const px=offscreen?x:8+Math.cos(angle*Math.PI/180)*5.2;
       const py=offscreen?y:6+Math.sin(angle*Math.PI/180)*4.2;
-      compass.append(s("path",{d:"M -.3 -.22 L .3 0 L -.3 .22 Z",fill:"#f6d583",transform:`translate(${px} ${py}) rotate(${angle})`}));
+      const symbol=stage==="stars"?"★":stage==="chests"?"▣":stage==="map"?"Map":"";
+      compass.append(s("g",{"data-navigation":stage},s("path",{d:"M -.3 -.22 L .3 0 L -.3 .22 Z",fill:"#f6d583",transform:`translate(${px} ${py}) rotate(${angle})`}),s("text",{x:px,y:py+0.5,"text-anchor":"middle","font-size":0.3,fill:"#ffe1a2"},symbol)));
     }
-    counts.textContent=`Outposts ${game.outposts.filter(p=>p.open).length}/2    ·    Relics ${game.chests.filter(c=>c.open).length}/${game.chests.length}    ·    Torch ${radius(game).toFixed(1)}    ·    ${Math.floor(game.elapsed)}s`;
+    }
+    counts.textContent=`Outposts ${game.outposts.filter(p=>p.open).length}/2    ·    Discoveries ${game.chests.filter(c=>c.open).length}    ·    Torch ${radius(game).toFixed(1)}    ·    ${Math.floor(game.elapsed)}s`;
     const text=paused?"Paused. Resume when ready.":!running?`${game.fog?"Fog on":"Fog off"}. Click the game to begin. Switching fog starts a fresh expedition.`:game.message;
     if(text!==lastMessage) {status.textContent=text;lastMessage=text;}
     action.disabled=!running||paused;
     reflection.hidden=!game.finished;
     if(game.finished && game.completion) {
-      reflection.querySelector("[data-result]")!.textContent=`${game.fog?"Fog on":"Fog off"}: ${Math.floor(game.completion.elapsed)} seconds to win, ${game.completion.chests}/${game.chests.length} treasures at win, ${Math.round(game.completion.distance)} tiles traveled at win. Current collection: ${game.chests.filter(c=>c.open).length}/${game.chests.length}. These are run statistics, not a report of your feelings.`;
+      reflection.querySelector("[data-result]")!.textContent=`${game.fog?"Fog on":"Fog off"}: ${Math.floor(game.completion.elapsed)} seconds to win, ${game.completion.chests} discoveries at win, ${Math.round(game.completion.distance)} tiles traveled at win. Current collection: ${game.chests.filter(c=>c.open).length}. These are run statistics, not a report of your feelings.`;
     }
   }
   const directions: Record<string,[number,number]>={w:[0,-1],ArrowUp:[0,-1],s:[0,1],ArrowDown:[0,1],a:[-1,0],ArrowLeft:[-1,0],d:[1,0],ArrowRight:[1,0]};

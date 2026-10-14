@@ -113,3 +113,17 @@ No human timing or enjoyment observations for this version yet; other-person on/
 ### Boost idle recharge adjustment — 2026-10-13
 
 Student requested energy recovery while idle as well as while walking. Updated: after releasing Shift / Boost, energy recovers at 20% per second during walking or standing; paused time does not recharge. Holding Boost without movement neither drains nor recharges. HUD and instructions updated. Rules and mounted-input tests failed before the change and passed afterward, including idle recharge and frozen paused energy. Full suite 122 passed; typecheck/build passed. Local only, no push. This replaces the earlier walking-only recharge rule.
+
+
+## Staged quests and collection guidance — 2026-10-13
+
+User approved local-only refinement: initial quest shows outposts 0/2 without star/chest totals; stages advance through claim-map, collect-stars, remaining-chests, complete. Acquiring the map marks every uncollected star together; after all stars, every unopened ordinary chest is marked. Previous finds count without reopening. Hinted objects can be seen over fog, without revealing surrounding terrain; edge arrows hide individually when their markers are on-screen.
+
+Assistant technical evidence: 124 tests (24 Fogbound), typecheck/build passed; existing desktop/phone e2e 16 passed. Independent read-only review found no demonstrated correctness issue. Actual browser scripted direction-button traversal verified outposts1/2→claim map→stars with 2 arrows→1 star arrow after first pickup→remaining-chests quest→Exploration complete and visible You got everything. At 390px, page width375 <=viewport390. Restored fresh outposts0/2 for student replay.
+
+This traversal used scripted direction-button steps, so its displayed time is NOT a valid real-player round-duration measurement. No human experience observations for this revision were supplied; other-person on/off comparison remains pending. User explicitly requested no push or PR for this iteration.
+
+
+### Early collection-bar feedback — 2026-10-13
+
+Student reported an empty/non-updating upper-left bar during early chest/outpost play. Collection state was updating, but the staged-quest implementation hid the collection bar until the chest-cleanup stage. Removed that visibility restriction: the bar is present from startup and fills on every chest/star pickup. No numeric treasure total is printed; outpost progress remains separately shown in the current quest. Mounted regression verifies initial visibility and value0, first chest value1 while still in outposts0/2, and no 1/8 text. Failed before fix, passed after; full suite125, typecheck/build passed. Local only; no push or PR.

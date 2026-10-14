@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createGame, move, interact, visibility, reveal, radius, WORLD, shouldShowCompass, compassTarget, hasEverything } from "../src/minigames/fogbound/game";
+import { createGame, move, interact, visibility, reveal, radius, WORLD, shouldShowCompass, compassTarget, hasEverything, questStage, navigationTargets } from "../src/minigames/fogbound/game";
 import { fogbound } from "../src/minigames/fogbound";
 
 afterEach(() => { vi.useRealTimers(); document.body.replaceChildren(); });
@@ -92,7 +92,7 @@ describe("Fogbound rules", () => {
     g.player={x:22.5,y:7.5};reveal(g);expect(shouldShowCompass(g)).toBe(false); // remembered marker
     g.player={x:30.5,y:7.5};expect(shouldShowCompass(g)).toBe(true); // off screen again
     g.fog=false;g.player={x:17.5,y:11.5};expect(shouldShowCompass(g)).toBe(false);
-    g.outposts.forEach(p=>p.open=true);expect(shouldShowCompass(g)).toBe(false);
+    g.outposts.forEach(p=>p.open=true);expect(shouldShowCompass(g)).toBe(true); // now guides to the map
   });
   it("unlocks Boost in the first chest, spends only while moving and recharges during walking or idle", () => {
     const g=createGame(true);const normal=createGame(true);move(g,1,0,0.1,true);move(normal,1,0,0.1);
@@ -117,14 +117,24 @@ describe("Fogbound rules", () => {
     move(a,1,0,0.1,true);for(let i=0;i<10;i++)move(b,1,0,0.01,true);
     expect(a.player.x).toBeCloseTo(b.player.x,8);expect(a.boost).toBe(0);expect(b.boost).toBe(0);
   });
-  it("locks the treasure map until outposts open and guides one remaining star at a time", () => {
+  it("locks the treasure map until outposts open and guides remaining stars then unopened chests", () => {
     const g=createGame(true);g.player={...g.chests[3]};interact(g);expect(g.chests[3].open).toBe(false);expect(g.treasureMap).toBe(false);
     g.outposts.forEach(p=>p.open=true);g.finished=true;interact(g);expect(g.treasureMap).toBe(true);
     expect(compassTarget(g)).toBe(g.chests[6]);g.player={...g.chests[6]};interact(g);
-    expect(compassTarget(g)).toBe(g.chests[7]);g.player={...g.chests[7]};interact(g);expect(compassTarget(g)).toBeUndefined();
+    expect(compassTarget(g)).toBe(g.chests[7]);g.player={...g.chests[7]};interact(g);expect(navigationTargets(g)).toEqual(g.chests.filter(c=>!c.open&&!c.rare));
     expect(hasEverything(g)).toBe(false);
     for(const c of g.chests.filter(c=>!c.open)){g.player={...c};interact(g);}expect(hasEverything(g)).toBe(true);expect(g.finalCompletion).not.toBeNull();
     const time=g.finalCompletion!.elapsed;g.elapsed+=10;interact(g);expect(g.finalCompletion!.elapsed).toBe(time);
+  });
+  it("advances quests and reveals all relevant targets without reopening early discoveries", () => {
+    const g=createGame(true);expect(questStage(g)).toBe("outposts");expect(navigationTargets(g)).toEqual([g.outposts[0]]);
+    g.outposts.forEach(p=>p.open=true);g.finished=true;expect(questStage(g)).toBe("map");expect(navigationTargets(g)).toEqual([g.chests[3]]);
+    g.player={...g.chests[3]};interact(g);expect(questStage(g)).toBe("stars");expect(navigationTargets(g)).toEqual([g.chests[6],g.chests[7]]);
+    g.player={...g.chests[6]};interact(g);expect(navigationTargets(g)).toEqual([g.chests[7]]);
+    g.player={...g.chests[7]};interact(g);expect(questStage(g)).toBe("chests");expect(navigationTargets(g)).toEqual(g.chests.filter(c=>!c.open));
+    for(const c of [...navigationTargets(g)]){g.player={...c};interact(g);}expect(questStage(g)).toBe("complete");expect(navigationTargets(g)).toEqual([]);
+    const early=createGame(true);early.player={...early.chests[6]};interact(early);early.outposts.forEach(p=>p.open=true);early.finished=true;
+    early.player={...early.chests[3]};interact(early);expect(navigationTargets(early)).toEqual([early.chests[7]]);
   });
   it("has a walkable path from camp to every collectible and outpost", () => {
     const seen = new Set(["3,19"]), queue = [[3,19]];
@@ -141,6 +151,25 @@ describe("Fogbound rules", () => {
 });
 
 describe("Fogbound input and lifecycle", () => {
+  it("shows only the first quest and no treasure totals at startup", () => {
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
+    expect(host.querySelector("[data-quest]")).not.toBeNull();expect(host.querySelector("[data-quest]")!.textContent).toContain("0/2");
+    expect(host.querySelector(".fog-hud")!.textContent).not.toMatch(/0\/8|stars/i);
+    expect(host.querySelector(".fog-instructions")!.textContent).not.toMatch(/8 treasures|2 hidden stars/);
+    stop();
+  });
+  it("fills the collection bar from the first chest before reaching the star quest", () => {
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
+    const bar=host.querySelector<HTMLProgressElement>('[aria-label="Collected treasures"]')!;
+    expect(bar.hidden).toBe(false);expect(bar.value).toBe(0);
+    host.querySelector<HTMLButtonElement>("[data-start]")!.click();
+    const button=host.querySelector<HTMLButtonElement>('[aria-label="Move northeast"]')!;
+    for(let i=0;i<8;i++)button.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+    host.querySelector<HTMLButtonElement>("[data-interact]")!.click();
+    expect(bar.hidden).toBe(false);expect(bar.value).toBe(1);
+    expect(host.querySelector("[data-quest]")!.textContent).toContain("0/2");
+    expect(host.querySelector(".fog-hud")!.textContent).not.toContain("1/8");stop();
+  });
   it("starts from a fresh viewport click and supports its in-game start button", () => {
     vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
     const board=host.querySelector<HTMLElement>("[data-board]")!;
