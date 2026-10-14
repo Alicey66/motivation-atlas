@@ -1,4 +1,4 @@
-# Playtest protocol — not completed
+# Playtesting — student self-test recorded; other-person comparison pending
 
 AI-use disclosure: Codex drafted the protocol. Only the student and a real player may supply observations.
 
@@ -37,6 +37,44 @@ Checked 2026-10-13 (America/New_York):
 - `npm run e2e` — 16 upstream browser tests passed. These cover desktop and phone, but do not include the new Discovery game page.
 - Separate assistant browser check on Discovery: game mounts and starts; direction control changes player position; fog toggle resets position/mode; at 390×844 viewport, document width 375 <= viewport width 390, no horizontal overflow. Screenshot inspected.
 - The first local-server/e2e attempts were blocked by sandbox port restrictions; the same commands ran with approved local-listening permissions and succeeded.
-- No full human run, completion-time measurement or player-feeling observation has been performed. Automated reachability checks establish that all chests and outposts can be reached, not that their placement is enjoyable.
+- At the time of these engineering checks, no human run, completion-time measurement or player-feeling observation had been recorded. The later student self-test is recorded separately below. Automated reachability checks establish that all chests and outposts can be reached, not that their placement is enjoyable.
 
 These checks establish engineering behavior, not enjoyment or human feelings. PR CI is pending until an authorized PR exists.
+
+
+## Student self-test feedback — 2026-10-13, prototype ac06930
+
+Provenance: student-reported in this chat, paraphrased by Codex. This is the designer's self-test, not another-person playtest. No measured duration, complete route, relic count, or explicit paired fog-off run was supplied. It does not fill the pending comparison table above.
+
+Reported observations:
+
+- Chest purpose and interaction were unclear. The student wanted E / Space prompts inside the game viewport near the chest. On opening, the main visible change was the chest losing its fill; no clear reward or player animation was noticed.
+- Clicking outside the viewport caused uncertainty about how to resume keyboard movement. The student also reported apparent freezes resolved by Restart expedition, and described this as frustrating. The exact trigger of each freeze is not established.
+- Three outpost hits felt arbitrary and poorly signposted. The student wanted a nearby prompt, visible three-step progress, hit reactions and an opening effect.
+- Opening the second outpost halted play. The student wanted a win announcement followed by continued movement and optional chest collection.
+- Movement felt somewhat slow. The student suggested a slightly faster speed, brief acceleration and almost immediate stopping, without noticeable drift.
+- Dim remembered terrain was preferred to fully black terrain after leaving. Fog was reported to encourage exploring the map. This is the student's perception, not a measured causal on/off result.
+- Walls were considered useful for finding chests.
+
+Ideas proposed by the student, not observed features:
+
+- Chest-opening particles or pop-out rewards, player feedback, and more functional chest rewards.
+- Outpost text/hit scaling and a burst on the third hit.
+- A centered You Win announcement shrinking into a corner while free exploration continues.
+- An optional alternative: collected chest resources charge a three-segment outpost bar. This would change core progression and is not approved as the next design.
+
+Assistant code inspection (separate from observations): keyboard handlers are scoped to the focusable board; leaving it stops keyboard control. Hiding the document sets paused=true, with Resume currently outside the viewport. Completion explicitly disables move/interact and skips the update loop. Chest interactions do update relic state, counter and a story message, but the message is below the viewport; no in-world prompt or opening animation exists. These facts explain several reported symptoms but do not establish the trigger of every reported freeze.
+
+
+## Approved second revision — 2026-10-13
+
+User approved a local iteration: in-world prompts, feedback, focus-loss pause and click-to-resume, faster movement with brief acceleration and immediate stopping, and continued collecting after win. The user additionally suggested supplies for outposts and more corner collectibles. Implemented small version: 6 ordinary supply chests and 2 optional star relics; first pulse at each outpost consumes one supply, next two pulses cost none. No relic speed bonuses yet. Two ordinary chests are required for victory; remaining collection is optional. These rules are identical with fog on and off.
+
+Technical evidence (assistant, not new human observations): 112 tests across 20 files passed, including 12 Fogbound tests; typecheck and build passed. Upstream e2e: 16 passed (not specific to Discovery). Actual browser: near-chest prompt appears inside viewport; opening updates treasures to 1/8, supplies to 1 and shows a reward message/burst; clicking outside shows paused overlay; clicking resume preserves player coordinates and inventory. New page has no horizontal overflow at 390px. Independent read-only review found no blocking issue.
+
+Known scope: stars are collectible, not power-ups. Timing and enjoyment of this revision have not been measured by a human. First-win statistics are frozen; later exploration continues separately. This revision has not been pushed and no PR has been opened.
+
+
+### Pause-overlay regression — 2026-10-13
+
+Student reported that clicking the paused viewport failed while the lower Resume button worked. Assistant reproduced it in the in-app browser: overlay remained visible and status paused after clicking. Root cause: hiding the focused overlay generated a null-target focusout, which re-paused the game before board.focus ran. Fix transfers focus to the board before hiding the overlay. Regression test reproduced the browser-specific hiding/focusout side effect at the DOM boundary and failed before the fix, passed after. Actual browser recheck: overlay click resumed; direction input moved x from 3.5 to 3.932; clicking outside then the overlay again preserved x=3.932 and resumed. Full suite 113 tests passed; typecheck and build passed. No new human-experience evidence, no push or PR.

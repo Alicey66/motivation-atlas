@@ -20,3 +20,23 @@
 .fog-reflection { border-top: 1px solid var(--line); margin-top: 16px; }
 .fog-reflection[hidden] { display: none; }
 @media(max-width: 480px) { .fogbound { padding: 10px; } .fog-controls { gap: 8px; } .fog-actions { flex: 1; } .fog-actions button { font-size: .8rem; padding: 6px; } .fog-pad { grid-template-columns: repeat(3,40px); } }
+.fog-board { position: relative; border: 2px solid transparent; cursor: pointer; }
+.fog-board:focus, .fog-board:focus-within { border-color: #f6d583; outline: none; box-shadow: 0 0 0 2px #f6d58344; }
+.fog-hud { position: absolute; top: 10px; left: 10px; max-width: calc(100% - 20px); padding: 6px 9px; border-radius: 5px; background: #101b26dd; color: #fff1d2; font: .75rem/1.5 var(--body); pointer-events: none; }
+.fog-hud progress { display: block; width: 100%; height: 7px; margin-top: 4px; accent-color: #f5c975; }
+.fog-prompt { position: absolute; top: 40%; left: 50%; transform: translate(-50%,-100%); width: max-content; max-width: 94%; background: #fff1d2; color: #16202a; padding: 7px 12px; border-radius: 6px; font-size: .85rem; text-align: center; pointer-events: none; }
+.fog-toast { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); width: min(90%,390px); color: #fff1d2; text-align: center; pointer-events: none; }
+.fog-toast-enter { display: block; background: #101b26e8; padding: 10px; border: 1px solid #f5c975; border-radius: 6px; animation: fog-reward 5s both; font-size: .85rem; }
+.fogbound .fog-resume { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; background: #101b26bb; color: #fff1d2; font-size: 1.25rem; backdrop-filter: blur(2px); }
+.fog-win { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); padding: 10px 14px; color: #fff1d2; background: #173e4fee; border: 1px solid #86c9f4; border-radius: 6px; pointer-events: none; white-space: nowrap; font-size: 1.15rem; }
+.fog-win-enter { animation: fog-victory 2s cubic-bezier(.2,.8,.2,1) forwards; }
+.fog-player-pop { transform-box: fill-box; transform-origin: center; animation: fog-pop .3s ease-out; }
+.fogbound [hidden] { display: none !important; }
+@keyframes fog-reward { 0% { opacity: 0; transform: translateY(8px); } 8%,80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+@keyframes fog-pop { 40% { transform: scale(1.6); } 100% { transform: scale(1); } }
+@keyframes fog-victory { 0%,45% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(1); } 100% { top: 10px; left: calc(100% - 10px); transform: translate(-100%,0) scale(.75); transform-origin: top right; } }
+@media(max-width:480px) { .fog-hud { font-size: .65rem; } .fog-prompt { font-size: .75rem; } .fog-toast-enter { padding: 6px; font-size: .75rem; } }
+@media(prefers-reduced-motion:reduce) { .fog-player-pop { animation: none; } .fog-toast-enter { animation: none; } .fog-win-enter { animation: none; top: 10px; left: calc(100% - 10px); transform: translate(-100%,0) scale(.75); transform-origin: top right; } }
+
+@media(max-width:480px) { .fog-win-enter { animation-name: fog-victory-phone; } }
+@keyframes fog-victory-phone { 0%,45% { top:50%;left:50%;transform:translate(-50%,-50%); } 100% { top:65px;left:calc(100% - 10px);transform:translate(-100%,0) scale(.7);transform-origin:top right; } }

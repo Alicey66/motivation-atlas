@@ -32,6 +32,7 @@ describe("Fogbound rules", () => {
   it("opens nearby outposts once, upgrades sight, and ends after both are opened", () => {
     const g = createGame(true), before = radius(g);
     interact(g); expect(g.outposts[0].hits).toBe(0);
+    for (const c of g.chests.slice(0,2)) { g.player={...c};interact(g); }
     g.player = { ...g.outposts[0] };
     for (let i = 0; i < 3; i++) interact(g);
     expect(g.outposts[0].open).toBe(true); expect(radius(g)).toBeGreaterThan(before);
@@ -39,13 +40,39 @@ describe("Fogbound rules", () => {
     g.player = { ...g.outposts[1] };
     for (let i = 0; i < 3; i++) interact(g);
     expect(g.finished).toBe(true);
-    const p = { ...g.player }; move(g, 1, 0, 1); expect(g.player).toEqual(p);
+    const p = { ...g.player }; move(g, 1, 0, 1); expect(g.player.x).toBeGreaterThan(p.x);
+    const c=g.chests.find(c=>!c.open)!;g.player={...c};interact(g);expect(c.open).toBe(true);
+  });
+  it("requires one supply per outpost, consumes it once, and keeps completion statistics", () => {
+    const g=createGame(true);g.player={...g.outposts[0]};interact(g);expect(g.outposts[0].hits).toBe(0);
+    g.player={...g.chests[0]};interact(g);expect(g.supplies).toBe(1);
+    g.player={...g.outposts[0]};interact(g);expect(g.supplies).toBe(0);expect(g.outposts[0].hits).toBe(1);
+    interact(g);interact(g);expect(g.outposts[0].open).toBe(true);expect(g.supplies).toBe(0);
+    g.player={...g.chests[1]};interact(g);g.player={...g.outposts[1]};
+    g.elapsed=75;interact(g);interact(g);interact(g);expect(g.completion?.elapsed).toBe(75);
+    g.elapsed=90;expect(g.completion?.elapsed).toBe(75);
   });
   it("collects a chest only once and leaves distant chests untouched", () => {
     const g = createGame(true); interact(g);
     expect(g.chests.every(c => !c.open)).toBe(true);
     g.player = { ...g.chests[0] }; interact(g); interact(g);
     expect(g.chests.filter(c => c.open)).toHaveLength(1);
+  });
+  it("accelerates briefly but stops without positional drift", () => {
+    const g=createGame(true);move(g,1,0,0.04);
+    expect(g.player.x-3.5).toBeLessThan(2.16*0.04);
+    move(g,1,0,0.2);const x=g.player.x;move(g,0,0,0.2);
+    expect(g.player.x).toBe(x);expect(g.speed).toBe(0);
+  });
+  it("keeps supplies, collection, progression and movement identical in both fog modes", () => {
+    const on=createGame(true),off=createGame(false);
+    for(const g of [on,off]) {
+      move(g,1,-1,0.1);g.player={...g.chests[0]};interact(g);
+      g.player={...g.outposts[0]};interact(g);interact(g);interact(g);
+    }
+    expect(on.player).toEqual(off.player);expect(on.supplies).toBe(off.supplies);
+    expect(on.chests).toEqual(off.chests);expect(on.outposts).toEqual(off.outposts);
+    expect(radius(on)).toBe(radius(off));
   });
   it("has a walkable path from camp to every collectible and outpost", () => {
     const seen = new Set(["3,19"]), queue = [[3,19]];
@@ -75,6 +102,35 @@ describe("Fogbound input and lifecycle", () => {
     expect(board.getAttribute("data-player-x")).toBe("3.5");
     expect(host.querySelector("[data-status]")!.textContent).toContain("Fog off");
     stop(); expect(host.childNodes.length).toBe(0); expect(vi.getTimerCount()).toBe(0);
+  });
+  it("pauses on window focus loss and resumes in the viewport without losing progress", () => {
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
+    host.querySelector<HTMLButtonElement>("[data-start]")!.click();
+    const board=host.querySelector<HTMLElement>("[data-board]")!;
+    board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));vi.advanceTimersByTime(200);
+    const x=board.getAttribute("data-player-x");window.dispatchEvent(new Event("blur"));vi.advanceTimersByTime(800);
+    expect(board.getAttribute("data-player-x")).toBe(x);
+    const resume=host.querySelector<HTMLButtonElement>("[data-resume]")!;expect(resume.hidden).toBe(false);resume.click();
+    expect(document.activeElement===board).toBe(true);expect(resume.hidden).toBe(true);
+    board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));vi.advanceTimersByTime(200);
+    expect(Number(board.getAttribute("data-player-x"))).toBeGreaterThan(Number(x));stop();
+  });
+  it("resumes when hiding the focused overlay triggers browser focusout", () => {
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
+    host.querySelector<HTMLButtonElement>("[data-start]")!.click();window.dispatchEvent(new Event("blur"));
+    const overlay=host.querySelector<HTMLButtonElement>("[data-resume]")!;
+    // jsdom does not blur focused elements on hiding them. Reproduce the
+    // actual in-app browser side effect at this DOM boundary only.
+    Object.defineProperty(overlay,"hidden",{configurable:true,get(){return overlay.hasAttribute("hidden");},set(value:boolean){
+      overlay.toggleAttribute("hidden",value);
+      if(value&&document.activeElement===overlay)overlay.dispatchEvent(new FocusEvent("focusout",{bubbles:true,relatedTarget:null}));
+    }});
+    overlay.focus();overlay.click();
+    expect(overlay.hidden).toBe(true);
+    const board=host.querySelector<HTMLElement>("[data-board]")!;
+    expect(document.activeElement===board).toBe(true);
+    board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));vi.advanceTimersByTime(200);
+    expect(Number(board.getAttribute("data-player-x"))).toBeGreaterThan(3.5);stop();
   });
   it("returns movement focus after clicking an interaction and pauses safely", () => {
     vi.useFakeTimers();

@@ -1,10 +1,10 @@
 // All coordinates are in tiles. No DOM, timers, network or randomness here.
 export type Point = { x: number; y: number };
 type Outpost = Point & { open: boolean; hits: number };
-type Chest = Point & { open: boolean; name: string; story: string };
+type Chest = Point & { open: boolean; name: string; story: string; rare?: boolean };
 export type Game = {
   player: Point; fog: boolean; explored: Set<string>; outposts: Outpost[];
-  chests: Chest[]; finished: boolean; elapsed: number; distance: number; message: string;
+  chests: Chest[]; supplies: number; speed: number; completion: { elapsed: number; distance: number; chests: number } | null; finished: boolean; elapsed: number; distance: number; message: string;
 };
 const walls = new Set<string>();
 const wall = (x: number, y: number, width: number, height: number) => {
@@ -18,13 +18,17 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x-b.x, a.y-b.y);
 export function radius(g: Game): number { return 2.8 + g.outposts.filter(p=>p.open).length * 0.7; }
 export function createGame(fog: boolean): Game {
   const g: Game = {
-    player: {x:3.5,y:19.5}, fog, explored:new Set(), finished:false, elapsed:0, distance:0,
+    player: {x:3.5,y:19.5}, supplies:0, speed:0, completion:null, fog, explored:new Set(), finished:false, elapsed:0, distance:0,
     outposts:[{x:17.5,y:7.5,open:false,hits:0},{x:31.5,y:20.5,open:false,hits:0}],
     chests:[
       {x:6.5,y:16.5,open:false,name:"Shell",story:"A shell far from the sea. Someone carried it here."},
       {x:8.5,y:8.5,open:false,name:"Star chart",story:"The chart marks a route through the northern ruins."},
       {x:24.5,y:10.5,open:false,name:"Copper bell",story:"A bell once used to guide travelers home."},
       {x:34.5,y:18.5,open:false,name:"Last letter",story:"The letter reads: ‘Leave a light for whoever comes next.’"},
+      {x:14.5,y:15.5,open:false,name:"Lantern oil",story:"A flask left by an earlier traveler."},
+      {x:27.5,y:21.5,open:false,name:"Wayfinder token",story:"A mark of safe passage."},
+      {x:2.5,y:3.5,open:false,rare:true,name:"North star",story:"A rare star relic tucked into the far corner."},
+      {x:35.5,y:3.5,open:false,rare:true,name:"Dawn star",story:"A rare star relic, waiting beyond the ruins."},
     ],
     message:"Torch and compass ready. Follow the arrow, or explore a side path.",
   }; reveal(g); return g;
@@ -51,8 +55,11 @@ function walkable(x: number, y: number): boolean {
 }
 export function move(g: Game, dx: number, dy: number, seconds: number): void {
   const norm=Math.hypot(dx,dy);
-  if(g.finished || !norm || seconds<=0) return;
-  const amount=1.8 * Math.min(seconds,1);
+  if(!norm || seconds<=0) { g.speed=0; return; }
+  const dt=Math.min(seconds,1), maximum=2.16, acceleration=maximum/0.1;
+  const ramp=Math.min(dt,(maximum-g.speed)/acceleration);
+  const amount=g.speed*ramp+0.5*acceleration*ramp*ramp+maximum*(dt-ramp);
+  g.speed=Math.min(maximum,g.speed+acceleration*dt);
   // Small collision steps prevent tunneling and permit sliding along walls.
   const steps=Math.ceil(amount/0.08);
   for(let i=0;i<steps;i++) {
@@ -64,14 +71,18 @@ export function move(g: Game, dx: number, dy: number, seconds: number): void {
   reveal(g);
 }
 export function interact(g: Game): void {
-  if(g.finished) return;
   const chest=g.chests.find(c=>!c.open && distance(g.player,c)<1.3);
-  if(chest) { chest.open=true; g.message=`Found ${chest.name.toLowerCase()}. ${chest.story}`; return; }
+  if(chest) { chest.open=true; if(!chest.rare) g.supplies++; g.message=`Found ${chest.name.toLowerCase()}. ${chest.story}${chest.rare ? " ★ Rare relic collected!" : " +1 supply."}`; return; }
   const post=g.outposts.find(o=>!o.open && distance(g.player,o)<1.5);
   if(!post) { g.message="Move closer to a chest or red outpost, then press Space / E."; return; }
+  if(post.hits===0) {
+    if(g.supplies<1) { g.message="This outpost needs 1 supply. Find a chest nearby."; return; }
+    g.supplies--;
+  }
   post.hits++;
   if(post.hits<3) { g.message=`Seal weakening: ${post.hits}/3 pulses. Press again.`; return; }
   post.open=true; reveal(g);
   g.finished=g.outposts.every(o=>o.open);
-  g.message=g.finished ? "Both outposts are lit. Your expedition is complete." : "Outpost opened! Your torch reaches farther. A new destination is on the compass.";
+  if(g.finished && !g.completion) g.completion={elapsed:g.elapsed,distance:g.distance,chests:g.chests.filter(c=>c.open).length};
+  g.message=g.finished ? "Both outposts are lit. You win! Keep exploring for the remaining relics." : "Outpost opened! Your torch reaches farther. A new destination is on the compass.";
 }

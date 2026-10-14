@@ -1,11 +1,13 @@
 import { h, s } from "../../lib/dom";
 import type { Minigame } from "../types";
-import { createGame, move, interact, radius, visibility, WORLD, type Game } from "./game";
+import { createGame, move, interact, radius, visibility, WORLD } from "./game";
 import "./fogbound.css";
 
 function mount(el: HTMLElement): () => void {
   let game=createGame(true), running=false, paused=false;
   const keys=new Set<string>();
+  let feedback: {x:number;y:number;age:number;color:string} | null=null;
+  let victoryShown=false;
   let pointerDirection: [number,number]=[0,0];
   const fog=h("input",{type:"checkbox",checked:true,"data-mechanic":"fog-of-war"});
   const start=h("button",{type:"button","data-start":"",class:"fog-primary"},"Take torch & compass");
@@ -14,6 +16,13 @@ function mount(el: HTMLElement): () => void {
   const counts=h("p",{class:"fog-counts"});
   const board=h("div",{tabindex:0,"data-board":"",class:"fog-board",role:"group","aria-label":"Expedition. WASD or arrows to move. Space or E to interact."});
   const svg=s("svg",{viewBox:"0 0 16 12","aria-hidden":"true",class:"fog-world"});
+  const hud=h("div",{class:"fog-hud"});
+  const collected=h("progress",{max:8,value:0,"aria-label":"Collected treasures"});
+  const hudText=h("span",{});hud.append(hudText,collected);
+  const prompt=h("div",{class:"fog-prompt",hidden:true,"data-prompt":""});
+  const toast=h("div",{class:"fog-toast",role:"status","data-reward":""});
+  const resume=h("button",{type:"button",class:"fog-resume","data-resume":"",hidden:true},"Paused · Click to resume");
+  const win=h("div",{class:"fog-win",hidden:true},"You win! Keep exploring.");
   const defs=s("defs");
   const world=s("g"); const tiles: SVGRectElement[]=[];
   for(let y=0;y<WORLD.height;y++) for(let x=0;x<WORLD.width;x++) {
@@ -23,7 +32,7 @@ function mount(el: HTMLElement): () => void {
   const halo=s("circle",{cx:8,cy:6,r:2.8,fill:"none",stroke:"#f6d583","stroke-width":0.025,opacity:0.5});
   const player=s("circle",{cx:8,cy:6,r:0.2,fill:"#fff4c8",stroke:"#ac792d","stroke-width":0.06});
   const compass=s("g");
-  svg.append(defs,world,halo,player,compass); board.append(svg);
+  svg.append(defs,world,halo,player,compass); board.append(svg,hud,prompt,toast,win,resume);
   const legend=h("p",{class:"fog-legend"},"Gold: chest · Red: sealed outpost · Blue: opened · Dim: explored terrain");
   const action=h("button",{type:"button",class:"fog-primary","data-interact":""},"Pulse / open chest");
   const pad=h("div",{class:"fog-pad","aria-label":"Movement controls"});
@@ -34,6 +43,8 @@ function mount(el: HTMLElement): () => void {
     btn.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ") { e.preventDefault(); if(running&&!paused) {move(game,dx,dy,0.25);render();} }});
     pad.append(btn);
   }
+  const journal=h("ul",{class:"fog-journal"});
+  let journalCount=-1;
   const reflection=h("section",{class:"fog-reflection",hidden:true},
     h("h4",{},"What did you discover?"),
     h("p",{"data-result":""}),
@@ -42,9 +53,9 @@ function mount(el: HTMLElement): () => void {
   const root=h("div",{class:"fogbound"},
     h("header",{class:"fog-heading"},h("div",{},h("h3",{},"Fogbound"),h("p",{},"Leave a light. Find what lies between.")),
       h("label",{class:"fog-toggle"},fog," Fog of war")),
-    h("p",{class:"fog-instructions"},"Open two outposts with three pulses each. Look for four optional relics. WASD / arrows: move · Space / E: interact. Mouse and touch: hold direction buttons."),
+    h("p",{class:"fog-instructions"},"Open chests for supplies. Each outpost uses 1 supply and takes 3 pulses. Find 8 treasures, including 2 hidden stars. WASD / arrows: move · Space / E: interact. Mouse and touch: hold direction buttons."),
     board,counts,status,
-    h("div",{class:"fog-controls"},pad,h("div",{class:"fog-actions"},action,start,pause)),legend,reflection);
+    h("div",{class:"fog-controls"},pad,h("div",{class:"fog-actions"},action,start,pause)),legend,h("details",{},h("summary",{},"Collected relics"),journal),reflection);
   el.append(root);
   let lastMessage="";
   function render(): void {
@@ -59,19 +70,43 @@ function mount(el: HTMLElement): () => void {
       tile.setAttribute("fill",color); tile.setAttribute("stroke",v==="hidden"?color:"#263c43"); tile.setAttribute("stroke-width","0.025");
     });
     entities.replaceChildren();
+    hudText.textContent=`Treasures ${game.chests.filter(c=>c.open).length}/${game.chests.length} · Supplies ${game.supplies} · Outposts ${game.outposts.filter(p=>p.open).length}/2`;
+    collected.value=game.chests.filter(c=>c.open).length;
+    if(collected.value!==journalCount) {
+      journalCount=collected.value;
+      journal.replaceChildren(...game.chests.filter(c=>c.open).map(c=>h("li",{},`${c.rare?"★ ":""}${c.name}: ${c.story}`)));
+      if(!journalCount)journal.append(h("li",{},"Your discoveries will appear here."));
+    }
+    const nearChest=game.chests.find(c=>!c.open&&Math.hypot(c.x-game.player.x,c.y-game.player.y)<1.3);
+    const nearPost=game.outposts.find(p=>!p.open&&Math.hypot(p.x-game.player.x,p.y-game.player.y)<1.5);
+    prompt.hidden=!running||paused||(!nearChest&&!nearPost);
+    prompt.textContent=nearChest?`E / Space · Open ${nearChest.rare?"star relic":"chest"}`:nearPost?(nearPost.hits===0?`E / Space · Activate · 1 supply ${game.supplies?"":"needed"}`:`E / Space · Pulse · ${nearPost.hits}/3`):"";
+    const nearby=nearChest??nearPost;
+    if(nearby) {prompt.style.left=`${Math.max(25,Math.min(75,(8+nearby.x-game.player.x)/16*100))}%`;prompt.style.top=`${(6+nearby.y-game.player.y-0.5)/12*100}%`;}
+    resume.hidden=!paused;
+    board.classList.toggle("fog-paused",paused);
+    if(game.finished&&!victoryShown) {victoryShown=true;win.hidden=false;win.classList.add("fog-win-enter");}
+    if(feedback) {
+      const age=feedback.age;
+      const burst=s("g",{opacity:Math.max(0,1-age/0.7)});
+      burst.append(s("circle",{cx:feedback.x,cy:feedback.y,r:0.3+age*2,fill:"none",stroke:feedback.color,"stroke-width":0.05}));
+      for(let i=0;i<8;i++) {const a=i*Math.PI/4;burst.append(s("circle",{cx:feedback.x+Math.cos(a)*age*2,cy:feedback.y+Math.sin(a)*age*2-age*0.5,r:0.06,fill:feedback.color}));}
+      entities.append(burst);
+    }
     const flag=(x:number,y:number,color:string,label:string)=>s("g",{},s("circle",{cx:x,cy:y,r:0.65,fill:color,opacity:0.14}),s("path",{d:`M ${x-0.15} ${y+0.3} v -0.8 l 0.6 0.2 -0.6 0.2`,fill:color,stroke:color,"stroke-width":0.07}),s("text",{x,y:y+0.9,"text-anchor":"middle","font-size":0.28,fill:color},label));
     if(visibility(game,3,19)!=="hidden") entities.append(flag(3.5,19.5,"#86c9f4","Camp"));
     for(const [i,p] of game.outposts.entries()) {
       const v=visibility(game,Math.floor(p.x),Math.floor(p.y));
       if(v==="hidden") continue;
       const marker=flag(p.x,p.y,p.open?"#86c9f4":"#ff9686",p.open?"Opened":`Outpost ${i+1} · ${p.hits}/3`);
+      for(let segment=0;segment<3;segment++) marker.append(s("rect",{x:p.x-0.45+segment*0.32,y:p.y+1.05,width:0.27,height:0.12,fill:segment<p.hits?"#86c9f4":"#624449"}));
       marker.setAttribute("opacity",v==="memory"?"0.45":"1"); entities.append(marker);
     }
     for(const c of game.chests) {
       const v=visibility(game,Math.floor(c.x),Math.floor(c.y)); if(v==="hidden") continue;
       const marker=s("g",{opacity:v==="memory"?0.4:1},
-        s("rect",{x:c.x-0.25,y:c.y-0.18,width:0.5,height:0.36,rx:0.04,fill:c.open?"#625b48":"#f5c975",stroke:"#f5d99c","stroke-width":0.04}),
-        s("text",{x:c.x,y:c.y+0.65,"text-anchor":"middle","font-size":0.25,fill:"#ffe1a2"},c.open?c.name:"Chest")); entities.append(marker);
+        c.rare?s("text",{x:c.x,y:c.y+0.2,"text-anchor":"middle","font-size":0.65,fill:c.open?"#625b48":"#f5c975"},"★"):s("rect",{x:c.x-0.25,y:c.y-0.18,width:0.5,height:0.36,rx:0.04,fill:c.open?"#625b48":"#f5c975",stroke:"#f5d99c","stroke-width":0.04}),
+        s("text",{x:c.x,y:c.y+0.65,"text-anchor":"middle","font-size":0.25,fill:"#ffe1a2"},c.open?c.name:c.rare?"★ Star relic":"Chest")); entities.append(marker);
     }
     compass.replaceChildren();
     const target=game.outposts.find(p=>!p.open);
@@ -85,42 +120,65 @@ function mount(el: HTMLElement): () => void {
       const py=offscreen?y:6+Math.sin(angle*Math.PI/180)*4.2;
       compass.append(s("path",{d:"M -.3 -.22 L .3 0 L -.3 .22 Z",fill:"#f6d583",transform:`translate(${px} ${py}) rotate(${angle})`}));
     }
-    counts.textContent=`Outposts ${game.outposts.filter(p=>p.open).length}/2    ·    Relics ${game.chests.filter(c=>c.open).length}/4    ·    Torch ${radius(game).toFixed(1)}    ·    ${Math.floor(game.elapsed)}s`;
+    counts.textContent=`Outposts ${game.outposts.filter(p=>p.open).length}/2    ·    Relics ${game.chests.filter(c=>c.open).length}/${game.chests.length}    ·    Torch ${radius(game).toFixed(1)}    ·    ${Math.floor(game.elapsed)}s`;
     const text=paused?"Paused. Resume when ready.":!running?`${game.fog?"Fog on":"Fog off"}. Take your equipment to begin. Switching fog starts a fresh expedition.`:game.message;
     if(text!==lastMessage) {status.textContent=text;lastMessage=text;}
-    action.disabled=!running||paused||game.finished;
+    action.disabled=!running||paused;
     reflection.hidden=!game.finished;
-    if(game.finished) {
-      reflection.querySelector("[data-result]")!.textContent=`${game.fog?"Fog on":"Fog off"}: ${Math.floor(game.elapsed)} seconds, ${game.chests.filter(c=>c.open).length}/4 relics, ${Math.round(game.distance)} tiles traveled. These are run statistics, not a report of your feelings.`;
+    if(game.finished && game.completion) {
+      reflection.querySelector("[data-result]")!.textContent=`${game.fog?"Fog on":"Fog off"}: ${Math.floor(game.completion.elapsed)} seconds to win, ${game.completion.chests}/${game.chests.length} treasures at win, ${Math.round(game.completion.distance)} tiles traveled at win. Current collection: ${game.chests.filter(c=>c.open).length}/${game.chests.length}. These are run statistics, not a report of your feelings.`;
     }
   }
   const directions: Record<string,[number,number]>={w:[0,-1],ArrowUp:[0,-1],s:[0,1],ArrowDown:[0,1],a:[-1,0],ArrowLeft:[-1,0],d:[1,0],ArrowRight:[1,0]};
-  const clear=()=>{keys.clear();pointerDirection=[0,0];};
+  const clear=()=>{keys.clear();pointerDirection=[0,0];game.speed=0;};
+  function setPaused(value:boolean):void {
+    if(!running)return;
+    paused=value;clear();pause.textContent=value?"Resume":"Pause";render();
+  }
+  function performInteraction():void {
+    if(!running||paused)return;
+    const before=game.chests.filter(c=>c.open).length+game.outposts.reduce((n,p)=>n+p.hits,0);
+    const target=game.chests.find(c=>!c.open&&Math.hypot(c.x-game.player.x,c.y-game.player.y)<1.3)??game.outposts.find(p=>!p.open&&Math.hypot(p.x-game.player.x,p.y-game.player.y)<1.5);
+    interact(game);
+    if(before!==game.chests.filter(c=>c.open).length+game.outposts.reduce((n,p)=>n+p.hits,0)) {
+      feedback={x:target?.x??game.player.x,y:target?.y??game.player.y,age:0,color:target&&"hits" in target?"#86c9f4":"#f5c975"};
+      player.classList.remove("fog-player-pop");void player.getBoundingClientRect();player.classList.add("fog-player-pop");
+    }
+    toast.replaceChildren(h("span",{class:"fog-toast-enter"},game.message));render();
+  }
+  resume.addEventListener("click",()=>{board.focus();setPaused(false);});
+  board.addEventListener("click",e=>{if(e.target===resume)return;if(paused)setPaused(false);board.focus();});
+  root.addEventListener("focusout",e=>{if(!root.contains(e.relatedTarget as Node|null))setPaused(true);});
+  const outside=(e:Event)=>{if(!root.contains(e.target as Node))setPaused(true);};
+  document.addEventListener("pointerdown",outside);
+  const loseFocus=()=>setPaused(true);
+  const releasePointer=()=>{pointerDirection=[0,0];};
   board.addEventListener("keydown",e=>{
     const k=e.key.length===1?e.key.toLowerCase():e.key;
     if(directions[k]) {e.preventDefault();keys.add(k);}
-    if((k===" "||k==="e")&&!e.repeat&&running&&!paused) {e.preventDefault();interact(game);render();}
+    if((k===" "||k==="e")&&!e.repeat&&running&&!paused) {e.preventDefault();performInteraction();}
   });
   board.addEventListener("keyup",e=>{keys.delete(e.key.length===1?e.key.toLowerCase():e.key);});
   board.addEventListener("blur",clear);
-  window.addEventListener("blur",clear);
-  window.addEventListener("pointerup",clear);
-  window.addEventListener("pointercancel",clear);
-  const visibilityChange=()=>{if(document.hidden) {clear();if(running&&!game.finished) {paused=true;pause.textContent="Resume";render();}}};
+  window.addEventListener("blur",loseFocus);
+  window.addEventListener("pointerup",releasePointer);
+  window.addEventListener("pointercancel",releasePointer);
+  const visibilityChange=()=>{if(document.hidden)setPaused(true);};
   document.addEventListener("visibilitychange",visibilityChange);
-  start.addEventListener("click",()=>{game=createGame(fog.checked);running=true;paused=false;clear();start.textContent="Restart expedition";pause.disabled=false;pause.textContent="Pause";render();board.focus();});
-  fog.addEventListener("change",()=>{game=createGame(fog.checked);running=false;paused=false;clear();start.textContent="Take torch & compass";pause.disabled=true;pause.textContent="Pause";render();});
+  start.addEventListener("click",()=>{game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=true;paused=false;clear();start.textContent="Restart expedition";pause.disabled=false;pause.textContent="Pause";render();board.focus();});
+  fog.addEventListener("change",()=>{game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=false;paused=false;clear();start.textContent="Take torch & compass";pause.disabled=true;pause.textContent="Pause";render();});
   pause.addEventListener("click",()=>{paused=!paused;clear();pause.textContent=paused?"Resume":"Pause";render();if(!paused)board.focus();});
-  action.addEventListener("click",()=>{if(running&&!paused) {interact(game);render();board.focus();}});
+  action.addEventListener("click",()=>{if(running&&!paused) {performInteraction();board.focus();}});
   let lastTick=Date.now();
   const timer=setInterval(()=>{
     const now=Date.now(),seconds=(now-lastTick)/1000;lastTick=now;
-    if(!running||paused||game.finished) return;
+    if(!running||paused) return;
     let [dx,dy]=pointerDirection;
     for(const k of keys) {dx+=directions[k][0];dy+=directions[k][1];}
+    if(feedback) {feedback.age+=seconds;if(feedback.age>0.7)feedback=null;}
     move(game,Math.sign(dx),Math.sign(dy),Math.min(seconds,0.1));game.elapsed+=seconds;render();
   },40);
   render();
-  return ()=>{clearInterval(timer);window.removeEventListener("blur",clear);window.removeEventListener("pointerup",clear);window.removeEventListener("pointercancel",clear);document.removeEventListener("visibilitychange",visibilityChange);root.remove();};
+  return ()=>{clearInterval(timer);window.removeEventListener("blur",loseFocus);window.removeEventListener("pointerup",releasePointer);window.removeEventListener("pointercancel",releasePointer);document.removeEventListener("pointerdown",outside);document.removeEventListener("visibilitychange",visibilityChange);root.remove();};
 }
 export const fogbound: Minigame={slug:"fogbound",title:"Fogbound: leave a light",motivators:["discovery"],author:"JarrettChen217",mount};
