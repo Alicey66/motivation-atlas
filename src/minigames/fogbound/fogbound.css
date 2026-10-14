@@ -1,0 +1,22 @@
+.fogbound { margin-block: 16px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.fog-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.fog-heading h3 { margin: 0; font-size: 1.8rem; }
+.fog-heading p { margin: 4px 0; color: var(--muted); }
+.fog-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.fog-toggle input { width: 22px; height: 22px; accent-color: var(--accent); }
+.fog-instructions, .fog-legend { font-size: .85rem; color: var(--muted); }
+.fog-board { background: #101b26; border-radius: 8px; overflow: hidden; touch-action: none; }
+.fog-world { display: block; width: 100%; aspect-ratio: 4 / 3; }
+.fog-world text { font-family: var(--body); }
+.fog-counts { font: .8rem var(--mono); margin: 10px 0; line-height: 1.8; }
+.fog-status { min-height: 3.2em; margin: 8px 0; }
+.fog-controls { display: flex; gap: 18px; align-items: center; justify-content: space-between; }
+.fog-pad { display: grid; grid-template-columns: repeat(3,44px); gap: 4px; }
+.fogbound button { min-height: 44px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; cursor: pointer; padding: 8px 12px; }
+.fog-pad button { padding: 0; font-size: 1.2rem; touch-action: none; user-select: none; }
+.fogbound button:disabled { opacity: .5; cursor: default; }
+.fogbound .fog-primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.fog-actions { display: flex; flex-direction: column; gap: 6px; }
+.fog-reflection { border-top: 1px solid var(--line); margin-top: 16px; }
+.fog-reflection[hidden] { display: none; }
+@media(max-width: 480px) { .fogbound { padding: 10px; } .fog-controls { gap: 8px; } .fog-actions { flex: 1; } .fog-actions button { font-size: .8rem; padding: 6px; } .fog-pad { grid-template-columns: repeat(3,40px); } }
