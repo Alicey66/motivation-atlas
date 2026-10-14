@@ -4,7 +4,7 @@ type Outpost = Point & { open: boolean; hits: number };
 type Chest = Point & { open: boolean; name: string; story: string; rare?: boolean };
 export type Game = {
   player: Point; fog: boolean; explored: Set<string>; outposts: Outpost[];
-  chests: Chest[]; supplies: number; speed: number; completion: { elapsed: number; distance: number; chests: number } | null; finished: boolean; elapsed: number; distance: number; message: string;
+  chests: Chest[]; supplies: number; speed: number; velocity: Point; completion: { elapsed: number; distance: number; chests: number } | null; finished: boolean; elapsed: number; distance: number; message: string;
 };
 const walls = new Set<string>();
 const wall = (x: number, y: number, width: number, height: number) => {
@@ -18,7 +18,7 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x-b.x, a.y-b.y);
 export function radius(g: Game): number { return 2.8 + g.outposts.filter(p=>p.open).length * 0.7; }
 export function createGame(fog: boolean): Game {
   const g: Game = {
-    player: {x:3.5,y:19.5}, supplies:0, speed:0, completion:null, fog, explored:new Set(), finished:false, elapsed:0, distance:0,
+    player: {x:3.5,y:19.5}, supplies:0, speed:0, velocity:{x:0,y:0}, completion:null, fog, explored:new Set(), finished:false, elapsed:0, distance:0,
     outposts:[{x:17.5,y:7.5,open:false,hits:0},{x:31.5,y:20.5,open:false,hits:0}],
     chests:[
       {x:6.5,y:16.5,open:false,name:"Shell",story:"A shell far from the sea. Someone carried it here."},
@@ -54,20 +54,23 @@ function walkable(x: number, y: number): boolean {
   return true;
 }
 export function move(g: Game, dx: number, dy: number, seconds: number): void {
-  const norm=Math.hypot(dx,dy);
-  if(!norm || seconds<=0) { g.speed=0; return; }
-  const dt=Math.min(seconds,1), maximum=2.16, acceleration=maximum/0.1;
-  const ramp=Math.min(dt,(maximum-g.speed)/acceleration);
-  const amount=g.speed*ramp+0.5*acceleration*ramp*ramp+maximum*(dt-ramp);
-  g.speed=Math.min(maximum,g.speed+acceleration*dt);
-  // Small collision steps prevent tunneling and permit sliding along walls.
-  const steps=Math.ceil(amount/0.08);
+  if(seconds<=0)return;
+  const norm=Math.hypot(dx,dy),dt=Math.min(seconds,1),maximum=2.16;
+  const target={x:norm?dx/norm*maximum:0,y:norm?dy/norm*maximum:0};
+  // Exponential easing is integrated exactly, so feel is independent of FPS.
+  // 95% of full speed in ~120ms; stopping drift is at most 0.039 tiles.
+  const tau=norm?0.04:0.018,decay=Math.exp(-dt/tau);
+  const delta={x:target.x*dt+(g.velocity.x-target.x)*tau*(1-decay),y:target.y*dt+(g.velocity.y-target.y)*tau*(1-decay)};
+  g.velocity={x:target.x+(g.velocity.x-target.x)*decay,y:target.y+(g.velocity.y-target.y)*decay};
+  if(!norm&&Math.hypot(g.velocity.x,g.velocity.y)<0.005)g.velocity={x:0,y:0};
+  const steps=Math.max(1,Math.ceil(Math.hypot(delta.x,delta.y)/0.08));
   for(let i=0;i<steps;i++) {
-    const old={...g.player}, x=g.player.x+dx/norm*amount/steps, y=g.player.y+dy/norm*amount/steps;
-    if(walkable(x,g.player.y)) g.player.x=x;
-    if(walkable(g.player.x,y)) g.player.y=y;
+    const old={...g.player},x=g.player.x+delta.x/steps,y=g.player.y+delta.y/steps;
+    if(walkable(x,g.player.y))g.player.x=x;else g.velocity.x=0;
+    if(walkable(g.player.x,y))g.player.y=y;else g.velocity.y=0;
     g.distance+=distance(old,g.player);
   }
+  g.speed=Math.hypot(g.velocity.x,g.velocity.y);
   reveal(g);
 }
 export function interact(g: Game): void {
@@ -85,4 +88,11 @@ export function interact(g: Game): void {
   g.finished=g.outposts.every(o=>o.open);
   if(g.finished && !g.completion) g.completion={elapsed:g.elapsed,distance:g.distance,chests:g.chests.filter(c=>c.open).length};
   g.message=g.finished ? "Both outposts are lit. You win! Keep exploring for the remaining relics." : "Outpost opened! Your torch reaches farther. A new destination is on the compass.";
+}
+
+export function shouldShowCompass(g: Game): boolean {
+  const target=g.outposts.find(p=>!p.open);
+  if(!target)return false;
+  const inViewport=Math.abs(target.x-g.player.x)<8 && Math.abs(target.y-g.player.y)<6;
+  return !inViewport || visibility(g,Math.floor(target.x),Math.floor(target.y))==="hidden";
 }

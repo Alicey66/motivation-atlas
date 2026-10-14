@@ -6,7 +6,7 @@ Motivator: Discovery. Author: JarrettChen217.
 
 ## Mechanic
 
-Take the torch and compass. Move with WASD / arrows, or hold direction buttons using mouse or touch. Space, E, or the interaction button opens nearby chests and pulses outposts. Six ordinary chests each supply one charge; two corner stars are optional relics. Each outpost consumes one charge on its first pulse, then opens after three pulses. Both outposts expand torch sight. Opening both wins; you may keep collecting afterward. First-win statistics remain separate from later exploration.
+Click the game to take the torch and compass and start. Move with WASD / arrows, or hold direction buttons using mouse or touch. Space, E, or the interaction button opens nearby chests and pulses outposts. Six ordinary chests each supply one charge; two corner stars are optional relics. Each outpost consumes one charge on its first pulse, then opens after three pulses. Both outposts expand torch sight. Opening both wins; you may keep collecting afterward. First-win statistics remain separate from later exploration.
 
 Fog of war hides unknown terrain. Nearby tiles are clear; explored terrain and discovered objects remain dim. Camp and opened outposts stay lit. The compass points toward the next outpost. With fog off, the camera viewport is fully visible; all other rules, rewards and layouts stay identical. Switching fog resets the run. Losing focus pauses; click the in-game overlay to resume without resetting. Aim for one or two minutes to win; timing needs human calibration.
 

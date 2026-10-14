@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createGame, move, interact, visibility, reveal, radius, WORLD } from "../src/minigames/fogbound/game";
+import { createGame, move, interact, visibility, reveal, radius, WORLD, shouldShowCompass } from "../src/minigames/fogbound/game";
 import { fogbound } from "../src/minigames/fogbound";
 
 afterEach(() => { vi.useRealTimers(); document.body.replaceChildren(); });
@@ -58,11 +58,22 @@ describe("Fogbound rules", () => {
     g.player = { ...g.chests[0] }; interact(g); interact(g);
     expect(g.chests.filter(c => c.open)).toHaveLength(1);
   });
-  it("accelerates briefly but stops without positional drift", () => {
+  it("eases into motion and settles within a tiny distance after release", () => {
     const g=createGame(true);move(g,1,0,0.04);
     expect(g.player.x-3.5).toBeLessThan(2.16*0.04);
-    move(g,1,0,0.2);const x=g.player.x;move(g,0,0,0.2);
-    expect(g.player.x).toBe(x);expect(g.speed).toBe(0);
+    move(g,1,0,0.2);const x=g.player.x,before=g.speed;
+    move(g,0,0,0.016);expect(g.speed).toBeGreaterThan(0);expect(g.speed).toBeLessThan(before);
+    move(g,0,0,0.2);expect(g.player.x-x).toBeGreaterThan(0);expect(g.player.x-x).toBeLessThan(0.05);expect(g.speed).toBe(0);
+  });
+  it("changes direction continuously rather than instantly reversing", () => {
+    const g=createGame(true);move(g,1,0,0.2);const x=g.player.x;
+    move(g,-1,0,0.016);expect(g.player.x).toBeGreaterThan(x);
+    move(g,-1,0,0.2);expect(g.player.x).toBeLessThan(x);
+  });
+  it("gives equivalent movement at different update frequencies", () => {
+    const a=createGame(true),b=createGame(true);move(a,1,0,0.2);
+    for(let i=0;i<20;i++)move(b,1,0,0.01);
+    expect(a.player.x).toBeCloseTo(b.player.x,8);expect(a.speed).toBeCloseTo(b.speed,8);
   });
   it("keeps supplies, collection, progression and movement identical in both fog modes", () => {
     const on=createGame(true),off=createGame(false);
@@ -73,6 +84,15 @@ describe("Fogbound rules", () => {
     expect(on.player).toEqual(off.player);expect(on.supplies).toBe(off.supplies);
     expect(on.chests).toEqual(off.chests);expect(on.outposts).toEqual(off.outposts);
     expect(radius(on)).toBe(radius(off));
+  });
+  it("hides the compass only when its target marker is actually visible", () => {
+    const g=createGame(true);expect(shouldShowCompass(g)).toBe(true);
+    g.player={x:17.5,y:11.5};reveal(g);expect(shouldShowCompass(g)).toBe(true); // on screen, still hidden by fog
+    g.player={x:17.5,y:9.5};reveal(g);expect(shouldShowCompass(g)).toBe(false);
+    g.player={x:22.5,y:7.5};reveal(g);expect(shouldShowCompass(g)).toBe(false); // remembered marker
+    g.player={x:30.5,y:7.5};expect(shouldShowCompass(g)).toBe(true); // off screen again
+    g.fog=false;g.player={x:17.5,y:11.5};expect(shouldShowCompass(g)).toBe(false);
+    g.outposts.forEach(p=>p.open=true);expect(shouldShowCompass(g)).toBe(false);
   });
   it("has a walkable path from camp to every collectible and outpost", () => {
     const seen = new Set(["3,19"]), queue = [[3,19]];
@@ -89,6 +109,18 @@ describe("Fogbound rules", () => {
 });
 
 describe("Fogbound input and lifecycle", () => {
+  it("starts from a fresh viewport click and supports its in-game start button", () => {
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
+    const board=host.querySelector<HTMLElement>("[data-board]")!;
+    board.click();board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));vi.advanceTimersByTime(200);
+    expect(Number(board.getAttribute("data-player-x"))).toBeGreaterThan(3.5);
+    host.querySelector<HTMLInputElement>("[data-mechanic]")!.click();
+    const entry=host.querySelector<HTMLButtonElement>("[data-entry]");expect(entry).not.toBeNull();
+    expect(entry!.hidden).toBe(false);entry!.focus();entry!.click();
+    expect(entry!.hidden).toBe(true);expect(document.activeElement===board).toBe(true);
+    board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));vi.advanceTimersByTime(200);
+    expect(Number(board.getAttribute("data-player-x"))).toBeGreaterThan(3.5);stop();
+  });
   it("starts, moves with keyboard, resets the comparison, and cleans up", () => {
     vi.useFakeTimers();
     const host=document.createElement("div"); document.body.append(host);

@@ -78,3 +78,22 @@ Known scope: stars are collectible, not power-ups. Timing and enjoyment of this 
 ### Pause-overlay regression — 2026-10-13
 
 Student reported that clicking the paused viewport failed while the lower Resume button worked. Assistant reproduced it in the in-app browser: overlay remained visible and status paused after clicking. Root cause: hiding the focused overlay generated a null-target focusout, which re-paused the game before board.focus ran. Fix transfers focus to the board before hiding the overlay. Regression test reproduced the browser-specific hiding/focusout side effect at the DOM boundary and failed before the fix, passed after. Actual browser recheck: overlay click resumed; direction input moved x from 3.5 to 3.932; clicking outside then the overlay again preserved x=3.932 and resumed. Full suite 113 tests passed; typecheck and build passed. No new human-experience evidence, no push or PR.
+
+
+### Compass visibility refinement — 2026-10-13
+
+Student requested hiding the edge compass when the destination flag is visible. Implemented: arrow remains for off-screen targets or on-screen targets still hidden by unexplored fog; it disappears for lit or remembered target markers inside the camera viewport. It reappears when the target is off-screen, and no arrow is shown when all outposts are open. Regression covers these states in both fog modes. 114 tests, typecheck and build passed. Local change only; no push or PR.
+
+
+### Movement easing iteration — 2026-10-13
+
+Student reported that start/stop acceleration did not feel effective and requested refinement. Replaced the short linear scalar ramp with exponential velocity easing: approach full speed over roughly 120ms, release easing time constant 18ms (maximum residual travel about 0.039 tiles), and continuous direction changes. Pause/focus-loss clears velocity immediately. Maximum speed remains 2.16 tiles/s; rewards, layout and fog rules are unchanged. Simulation updates every 16ms instead of 40ms, with unchanged tile colors skipped during DOM updates. This is a configured update interval, not measured guaranteed browser FPS.
+
+Regression tests failed on the previous abrupt-stop/reversal behavior before the fix. Full suite: 116 passed including 16 Fogbound tests; typecheck/build passed. Tests verify limited stopping travel, continuous reversal, diagonal normalization and equivalent displacement at different update frequencies. Subjective feel of this iteration still needs the student's next self-test; other-person comparison remains pending. Not pushed.
+
+
+### In-viewport start entry — 2026-10-13
+
+Student requested starting directly inside the freshly loaded game. Added a full-viewport Click to start button with WASD/arrows and E/Space instructions; clicking the viewport starts a new expedition and focuses movement. The lower equipment/restart button remains available. Changing fog returns to the start screen. Focus is transferred before the entry overlay is hidden, preserving the pause-overlay regression fix.
+
+Regression failed before the implementation; 117 tests (17 Fogbound), typecheck and build passed afterward. Actual browser: click entry hides start screen without pausing, direction input moves x from 3.5 to 3.978; reset returns to entry. This is an assistant technical check. No new human observations, no push or PR.

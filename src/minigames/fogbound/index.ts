@@ -1,6 +1,6 @@
 import { h, s } from "../../lib/dom";
 import type { Minigame } from "../types";
-import { createGame, move, interact, radius, visibility, WORLD } from "./game";
+import { createGame, move, interact, radius, visibility, WORLD, shouldShowCompass } from "./game";
 import "./fogbound.css";
 
 function mount(el: HTMLElement): () => void {
@@ -22,6 +22,8 @@ function mount(el: HTMLElement): () => void {
   const prompt=h("div",{class:"fog-prompt",hidden:true,"data-prompt":""});
   const toast=h("div",{class:"fog-toast",role:"status","data-reward":""});
   const resume=h("button",{type:"button",class:"fog-resume","data-resume":"",hidden:true},"Paused · Click to resume");
+  const entry=h("button",{type:"button",class:"fog-resume fog-entry","data-entry":""},
+    h("strong",{},"Click to start"),h("span",{},"WASD / arrows · Move"),h("span",{},"E / Space · Open chests & pulse outposts"),h("small",{},"Find supplies. Open both outposts. Keep exploring."));
   const win=h("div",{class:"fog-win",hidden:true},"You win! Keep exploring.");
   const defs=s("defs");
   const world=s("g"); const tiles: SVGRectElement[]=[];
@@ -32,7 +34,7 @@ function mount(el: HTMLElement): () => void {
   const halo=s("circle",{cx:8,cy:6,r:2.8,fill:"none",stroke:"#f6d583","stroke-width":0.025,opacity:0.5});
   const player=s("circle",{cx:8,cy:6,r:0.2,fill:"#fff4c8",stroke:"#ac792d","stroke-width":0.06});
   const compass=s("g");
-  svg.append(defs,world,halo,player,compass); board.append(svg,hud,prompt,toast,win,resume);
+  svg.append(defs,world,halo,player,compass); board.append(svg,hud,prompt,toast,win,resume,entry);
   const legend=h("p",{class:"fog-legend"},"Gold: chest · Red: sealed outpost · Blue: opened · Dim: explored terrain");
   const action=h("button",{type:"button",class:"fog-primary","data-interact":""},"Pulse / open chest");
   const pad=h("div",{class:"fog-pad","aria-label":"Movement controls"});
@@ -67,7 +69,9 @@ function mount(el: HTMLElement): () => void {
     tiles.forEach((tile,i)=>{
       const x=i%WORLD.width,y=Math.floor(i/WORLD.width),v=visibility(game,x,y),wall=WORLD.walls.has(`${x},${y}`);
       const color=v==="hidden"?"#101b26":wall?(v==="lit"?"#778b94":"#35434c"):(v==="lit"?((x+y)%2?"#314c52":"#2d474e"):"#1e2e37");
-      tile.setAttribute("fill",color); tile.setAttribute("stroke",v==="hidden"?color:"#263c43"); tile.setAttribute("stroke-width","0.025");
+      if(tile.getAttribute("fill")!==color) {
+        tile.setAttribute("fill",color);tile.setAttribute("stroke",v==="hidden"?color:"#263c43");tile.setAttribute("stroke-width","0.025");
+      }
     });
     entities.replaceChildren();
     hudText.textContent=`Treasures ${game.chests.filter(c=>c.open).length}/${game.chests.length} · Supplies ${game.supplies} · Outposts ${game.outposts.filter(p=>p.open).length}/2`;
@@ -83,7 +87,7 @@ function mount(el: HTMLElement): () => void {
     prompt.textContent=nearChest?`E / Space · Open ${nearChest.rare?"star relic":"chest"}`:nearPost?(nearPost.hits===0?`E / Space · Activate · 1 supply ${game.supplies?"":"needed"}`:`E / Space · Pulse · ${nearPost.hits}/3`):"";
     const nearby=nearChest??nearPost;
     if(nearby) {prompt.style.left=`${Math.max(25,Math.min(75,(8+nearby.x-game.player.x)/16*100))}%`;prompt.style.top=`${(6+nearby.y-game.player.y-0.5)/12*100}%`;}
-    resume.hidden=!paused;
+    resume.hidden=!paused;entry.hidden=running;
     board.classList.toggle("fog-paused",paused);
     if(game.finished&&!victoryShown) {victoryShown=true;win.hidden=false;win.classList.add("fog-win-enter");}
     if(feedback) {
@@ -110,7 +114,7 @@ function mount(el: HTMLElement): () => void {
     }
     compass.replaceChildren();
     const target=game.outposts.find(p=>!p.open);
-    if(target) {
+    if(target && shouldShowCompass(game)) {
       const dx=target.x-game.player.x,dy=target.y-game.player.y;
       const scale=Math.max(Math.abs(dx)/6.7,Math.abs(dy)/4.7,1);
       const x=8+dx/scale,y=6+dy/scale,angle=Math.atan2(dy,dx)*180/Math.PI;
@@ -121,7 +125,7 @@ function mount(el: HTMLElement): () => void {
       compass.append(s("path",{d:"M -.3 -.22 L .3 0 L -.3 .22 Z",fill:"#f6d583",transform:`translate(${px} ${py}) rotate(${angle})`}));
     }
     counts.textContent=`Outposts ${game.outposts.filter(p=>p.open).length}/2    ·    Relics ${game.chests.filter(c=>c.open).length}/${game.chests.length}    ·    Torch ${radius(game).toFixed(1)}    ·    ${Math.floor(game.elapsed)}s`;
-    const text=paused?"Paused. Resume when ready.":!running?`${game.fog?"Fog on":"Fog off"}. Take your equipment to begin. Switching fog starts a fresh expedition.`:game.message;
+    const text=paused?"Paused. Resume when ready.":!running?`${game.fog?"Fog on":"Fog off"}. Click the game to begin. Switching fog starts a fresh expedition.`:game.message;
     if(text!==lastMessage) {status.textContent=text;lastMessage=text;}
     action.disabled=!running||paused;
     reflection.hidden=!game.finished;
@@ -130,7 +134,7 @@ function mount(el: HTMLElement): () => void {
     }
   }
   const directions: Record<string,[number,number]>={w:[0,-1],ArrowUp:[0,-1],s:[0,1],ArrowDown:[0,1],a:[-1,0],ArrowLeft:[-1,0],d:[1,0],ArrowRight:[1,0]};
-  const clear=()=>{keys.clear();pointerDirection=[0,0];game.speed=0;};
+  const clear=()=>{keys.clear();pointerDirection=[0,0];game.speed=0;game.velocity={x:0,y:0};};
   function setPaused(value:boolean):void {
     if(!running)return;
     paused=value;clear();pause.textContent=value?"Resume":"Pause";render();
@@ -147,7 +151,8 @@ function mount(el: HTMLElement): () => void {
     toast.replaceChildren(h("span",{class:"fog-toast-enter"},game.message));render();
   }
   resume.addEventListener("click",()=>{board.focus();setPaused(false);});
-  board.addEventListener("click",e=>{if(e.target===resume)return;if(paused)setPaused(false);board.focus();});
+  board.addEventListener("click",e=>{if(e.target===resume)return;if(!running)begin();else {board.focus();if(paused)setPaused(false);}});
+  entry.addEventListener("click",e=>{e.stopPropagation();begin();});
   root.addEventListener("focusout",e=>{if(!root.contains(e.relatedTarget as Node|null))setPaused(true);});
   const outside=(e:Event)=>{if(!root.contains(e.target as Node))setPaused(true);};
   document.addEventListener("pointerdown",outside);
@@ -165,7 +170,11 @@ function mount(el: HTMLElement): () => void {
   window.addEventListener("pointercancel",releasePointer);
   const visibilityChange=()=>{if(document.hidden)setPaused(true);};
   document.addEventListener("visibilitychange",visibilityChange);
-  start.addEventListener("click",()=>{game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=true;paused=false;clear();start.textContent="Restart expedition";pause.disabled=false;pause.textContent="Pause";render();board.focus();});
+  function begin():void {
+    // Focus before hiding a focused overlay, avoiding a null-target blur pause.
+    board.focus();game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=true;paused=false;clear();start.textContent="Restart expedition";pause.disabled=false;pause.textContent="Pause";render();
+  }
+  start.addEventListener("click",begin);
   fog.addEventListener("change",()=>{game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=false;paused=false;clear();start.textContent="Take torch & compass";pause.disabled=true;pause.textContent="Pause";render();});
   pause.addEventListener("click",()=>{paused=!paused;clear();pause.textContent=paused?"Resume":"Pause";render();if(!paused)board.focus();});
   action.addEventListener("click",()=>{if(running&&!paused) {performInteraction();board.focus();}});
@@ -177,7 +186,7 @@ function mount(el: HTMLElement): () => void {
     for(const k of keys) {dx+=directions[k][0];dy+=directions[k][1];}
     if(feedback) {feedback.age+=seconds;if(feedback.age>0.7)feedback=null;}
     move(game,Math.sign(dx),Math.sign(dy),Math.min(seconds,0.1));game.elapsed+=seconds;render();
-  },40);
+  },16);
   render();
   return ()=>{clearInterval(timer);window.removeEventListener("blur",loseFocus);window.removeEventListener("pointerup",releasePointer);window.removeEventListener("pointercancel",releasePointer);document.removeEventListener("pointerdown",outside);document.removeEventListener("visibilitychange",visibilityChange);root.remove();};
 }
