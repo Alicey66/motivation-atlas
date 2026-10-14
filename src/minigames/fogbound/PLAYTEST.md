@@ -97,3 +97,19 @@ Regression tests failed on the previous abrupt-stop/reversal behavior before the
 Student requested starting directly inside the freshly loaded game. Added a full-viewport Click to start button with WASD/arrows and E/Space instructions; clicking the viewport starts a new expedition and focuses movement. The lower equipment/restart button remains available. Changing fog returns to the start screen. Focus is transferred before the entry overlay is hidden, preserving the pause-overlay regression fix.
 
 Regression failed before the implementation; 117 tests (17 Fogbound), typecheck and build passed afterward. Actual browser: click entry hides start screen without pausing, direction input moves x from 3.5 to 3.978; reset returns to entry. This is an assistant technical check. No new human observations, no push or PR.
+
+
+## Two-item local revision — 2026-10-13
+
+Approved by student: first chest unlocks Shift Boost; energy recharges during ordinary walking. Last outpost completion unlocks the existing nearby treasure-map chest; its compass points to one remaining star at a time. Both outposts plus all eight treasures trigger You got everything. Other items deferred.
+
+Implemented tuning: maximum Boost speed 1.5× normal; full charge supports three seconds; ordinary walking restores 20% per second. No drain while idle or blocked; no recharge while idle or holding Boost. Exhaustion requires releasing Boost to allow walking recharge. The speed easing remains in place, and updates split exactly at depletion, with tiny floating-point residue clamped. Mouse/touch can hold the Boost button, with separate pointer IDs for movement and Boost. Stars found before obtaining the map are skipped by its guidance.
+
+Assistant evidence: 122 tests including 22 Fogbound tests, typecheck and build passed. Existing 16 desktop/phone e2e tests passed (not a full new-game run). Real browser check: nearest chest unlocks visible Boost meter; Shift-modified movement changes energy from 100% to 92%; 390px viewport has no horizontal overflow. Map lock, sequential star targeting, full-collection gate, pause cleanup, recharge/drain conditions and depletion update-frequency equivalence verified by rules tests. Independent review found no important issue; its minor depletion timing finding was fixed and regression-tested.
+
+No human timing or enjoyment observations for this version yet; other-person on/off comparison remains pending. Main-objective completion snapshots are retained separately from bonus collection; final collection records its own completion snapshot. No push or PR for this revision.
+
+
+### Boost idle recharge adjustment — 2026-10-13
+
+Student requested energy recovery while idle as well as while walking. Updated: after releasing Shift / Boost, energy recovers at 20% per second during walking or standing; paused time does not recharge. Holding Boost without movement neither drains nor recharges. HUD and instructions updated. Rules and mounted-input tests failed before the change and passed afterward, including idle recharge and frozen paused energy. Full suite 122 passed; typecheck/build passed. Local only, no push. This replaces the earlier walking-only recharge rule.

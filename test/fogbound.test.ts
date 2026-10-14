@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createGame, move, interact, visibility, reveal, radius, WORLD, shouldShowCompass } from "../src/minigames/fogbound/game";
+import { createGame, move, interact, visibility, reveal, radius, WORLD, shouldShowCompass, compassTarget, hasEverything } from "../src/minigames/fogbound/game";
 import { fogbound } from "../src/minigames/fogbound";
 
 afterEach(() => { vi.useRealTimers(); document.body.replaceChildren(); });
@@ -94,6 +94,38 @@ describe("Fogbound rules", () => {
     g.fog=false;g.player={x:17.5,y:11.5};expect(shouldShowCompass(g)).toBe(false);
     g.outposts.forEach(p=>p.open=true);expect(shouldShowCompass(g)).toBe(false);
   });
+  it("unlocks Boost in the first chest, spends only while moving and recharges during walking or idle", () => {
+    const g=createGame(true);const normal=createGame(true);move(g,1,0,0.1,true);move(normal,1,0,0.1);
+    expect(g.player).toEqual(normal.player);expect(g.boostUnlocked).toBe(false);
+    g.player={...g.chests[0]};interact(g);expect(g.boostUnlocked).toBe(true);expect(g.boost).toBe(100);
+    move(g,0,0,0.1,true);expect(g.boost).toBe(100);
+    const x=g.player.x;move(g,1,0,0.5,true);expect(g.player.x-x).toBeGreaterThan(2.16*0.5);expect(g.boost).toBeLessThan(100);
+    const charge=g.boost;move(g,0,0,0.5);expect(g.boost).toBeGreaterThan(charge);
+    move(g,1,0,0.5);expect(g.boost).toBeGreaterThan(charge);
+  });
+  it("does not drain Boost against a wall and does not sputter after depletion", () => {
+    const g=createGame(true);g.player={...g.chests[0]};interact(g);
+    g.player={x:9.8,y:14.5};move(g,1,0,0.1,true);expect(g.boost).toBe(100);
+    g.player={x:3.5,y:19.5};g.boost=1;move(g,1,0,0.1,true);expect(g.boost).toBe(0);
+    move(g,1,0,0.1,true);expect(g.boost).toBe(0);expect(g.boosting).toBe(false);
+    move(g,1,0,0.2);expect(g.boost).toBeGreaterThan(0);
+    move(g,1,0,0.016,true);expect(g.boosting).toBe(true);
+  });
+  it("keeps near-depletion Boost travel equivalent at different update frequencies", () => {
+    const a=createGame(true),b=createGame(true);
+    for(const g of [a,b]){g.player={...g.chests[0]};interact(g);g.boost=1;}
+    move(a,1,0,0.1,true);for(let i=0;i<10;i++)move(b,1,0,0.01,true);
+    expect(a.player.x).toBeCloseTo(b.player.x,8);expect(a.boost).toBe(0);expect(b.boost).toBe(0);
+  });
+  it("locks the treasure map until outposts open and guides one remaining star at a time", () => {
+    const g=createGame(true);g.player={...g.chests[3]};interact(g);expect(g.chests[3].open).toBe(false);expect(g.treasureMap).toBe(false);
+    g.outposts.forEach(p=>p.open=true);g.finished=true;interact(g);expect(g.treasureMap).toBe(true);
+    expect(compassTarget(g)).toBe(g.chests[6]);g.player={...g.chests[6]};interact(g);
+    expect(compassTarget(g)).toBe(g.chests[7]);g.player={...g.chests[7]};interact(g);expect(compassTarget(g)).toBeUndefined();
+    expect(hasEverything(g)).toBe(false);
+    for(const c of g.chests.filter(c=>!c.open)){g.player={...c};interact(g);}expect(hasEverything(g)).toBe(true);expect(g.finalCompletion).not.toBeNull();
+    const time=g.finalCompletion!.elapsed;g.elapsed+=10;interact(g);expect(g.finalCompletion!.elapsed).toBe(time);
+  });
   it("has a walkable path from camp to every collectible and outpost", () => {
     const seen = new Set(["3,19"]), queue = [[3,19]];
     for (let i = 0; i < queue.length; i++) {
@@ -163,6 +195,26 @@ describe("Fogbound input and lifecycle", () => {
     expect(document.activeElement===board).toBe(true);
     board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));vi.advanceTimersByTime(200);
     expect(Number(board.getAttribute("data-player-x"))).toBeGreaterThan(3.5);stop();
+  });
+  it("shows Boost after collecting boots and handles Shift without breaking movement", () => {
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const stop=fogbound.mount(host);
+    host.querySelector<HTMLButtonElement>("[data-start]")!.click();
+    const northeast=host.querySelector<HTMLButtonElement>('[aria-label="Move northeast"]')!;
+    for(let i=0;i<8;i++)northeast.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+    host.querySelector<HTMLButtonElement>("[data-interact]")!.click();
+    const energy=host.querySelector<HTMLProgressElement>('[aria-label="Boost energy"]')!;
+    expect(host.querySelector<HTMLButtonElement>("[data-boost]")!.hidden).toBe(false);
+    const board=host.querySelector<HTMLElement>("[data-board]")!;
+    board.dispatchEvent(new KeyboardEvent("keydown",{key:"Shift",bubbles:true}));
+    vi.advanceTimersByTime(100);expect(energy.value).toBe(100);
+    board.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}));
+    vi.advanceTimersByTime(400);expect(energy.value).toBeLessThan(100);
+    const before=energy.value;board.dispatchEvent(new KeyboardEvent("keyup",{key:"Shift",bubbles:true}));
+    vi.advanceTimersByTime(200);expect(energy.value).toBeGreaterThan(before);
+    board.dispatchEvent(new KeyboardEvent("keyup",{key:"d",bubbles:true}));const walkingEnergy=energy.value;
+    vi.advanceTimersByTime(200);expect(energy.value).toBeGreaterThan(walkingEnergy);
+    window.dispatchEvent(new Event("blur"));const pausedEnergy=energy.value;
+    vi.advanceTimersByTime(400);expect(energy.value).toBe(pausedEnergy);stop();
   });
   it("returns movement focus after clicking an interaction and pauses safely", () => {
     vi.useFakeTimers();

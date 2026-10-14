@@ -4,6 +4,7 @@ type Outpost = Point & { open: boolean; hits: number };
 type Chest = Point & { open: boolean; name: string; story: string; rare?: boolean };
 export type Game = {
   player: Point; fog: boolean; explored: Set<string>; outposts: Outpost[];
+  boostUnlocked: boolean; boost: number; boosting: boolean; boostExhausted: boolean; treasureMap: boolean; finalCompletion: {elapsed:number;distance:number;chests:number} | null;
   chests: Chest[]; supplies: number; speed: number; velocity: Point; completion: { elapsed: number; distance: number; chests: number } | null; finished: boolean; elapsed: number; distance: number; message: string;
 };
 const walls = new Set<string>();
@@ -18,13 +19,14 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x-b.x, a.y-b.y);
 export function radius(g: Game): number { return 2.8 + g.outposts.filter(p=>p.open).length * 0.7; }
 export function createGame(fog: boolean): Game {
   const g: Game = {
+    boostUnlocked:false,boost:100,boosting:false,boostExhausted:false,treasureMap:false,finalCompletion:null,
     player: {x:3.5,y:19.5}, supplies:0, speed:0, velocity:{x:0,y:0}, completion:null, fog, explored:new Set(), finished:false, elapsed:0, distance:0,
     outposts:[{x:17.5,y:7.5,open:false,hits:0},{x:31.5,y:20.5,open:false,hits:0}],
     chests:[
-      {x:6.5,y:16.5,open:false,name:"Shell",story:"A shell far from the sea. Someone carried it here."},
+      {x:6.5,y:16.5,open:false,name:"Wayfarer boots",story:"Boost unlocked! Hold Shift while moving. Release Shift to recharge, walking or standing."},
       {x:8.5,y:8.5,open:false,name:"Star chart",story:"The chart marks a route through the northern ruins."},
       {x:24.5,y:10.5,open:false,name:"Copper bell",story:"A bell once used to guide travelers home."},
-      {x:34.5,y:18.5,open:false,name:"Last letter",story:"The letter reads: ‘Leave a light for whoever comes next.’"},
+      {x:34.5,y:18.5,open:false,name:"Treasure map",story:"The map points to one uncollected star at a time."},
       {x:14.5,y:15.5,open:false,name:"Lantern oil",story:"A flask left by an earlier traveler."},
       {x:27.5,y:21.5,open:false,name:"Wayfinder token",story:"A mark of safe passage."},
       {x:2.5,y:3.5,open:false,rare:true,name:"North star",story:"A rare star relic tucked into the far corner."},
@@ -53,12 +55,22 @@ function walkable(x: number, y: number): boolean {
     if(walls.has(`${Math.floor(x+dx)},${Math.floor(y+dy)}`)) return false;
   return true;
 }
-export function move(g: Game, dx: number, dy: number, seconds: number): void {
+export function move(g: Game, dx: number, dy: number, seconds: number, boostRequested=false): void {
   if(seconds<=0)return;
-  const norm=Math.hypot(dx,dy),dt=Math.min(seconds,1),maximum=2.16;
+  const norm=Math.hypot(dx,dy),dt=Math.min(seconds,1),beforeDistance=g.distance;
+  if(!boostRequested)g.boostExhausted=false;
+  const boostAllowed=boostRequested&&norm>0&&g.boostUnlocked&&g.boost>0&&!g.boostExhausted;
+  if(boostAllowed&&g.boost+1e-9<dt*100/3) {
+    const activeTime=g.boost/(100/3);
+    move(g,dx,dy,activeTime,true);
+    if(g.distance===beforeDistance)return; // blocked movement spends no energy
+    g.boost=0;g.boostExhausted=true;
+    move(g,dx,dy,dt-activeTime,true);return;
+  }
+  const maximum=2.16*(boostAllowed?1.5:1);
   const target={x:norm?dx/norm*maximum:0,y:norm?dy/norm*maximum:0};
   // Exponential easing is integrated exactly, so feel is independent of FPS.
-  // 95% of full speed in ~120ms; stopping drift is at most 0.039 tiles.
+  // 95% of target speed in ~120ms; stopping drift <=0.059 tiles at Boost speed.
   const tau=norm?0.04:0.018,decay=Math.exp(-dt/tau);
   const delta={x:target.x*dt+(g.velocity.x-target.x)*tau*(1-decay),y:target.y*dt+(g.velocity.y-target.y)*tau*(1-decay)};
   g.velocity={x:target.x+(g.velocity.x-target.x)*decay,y:target.y+(g.velocity.y-target.y)*decay};
@@ -71,11 +83,20 @@ export function move(g: Game, dx: number, dy: number, seconds: number): void {
     g.distance+=distance(old,g.player);
   }
   g.speed=Math.hypot(g.velocity.x,g.velocity.y);
+  const moving=norm>0&&g.distance-beforeDistance>0.000001;
+  g.boosting=Boolean(boostAllowed&&moving);
+  if(g.boosting) {g.boost=Math.max(0,g.boost-dt*100/3);if(g.boost<1e-8)g.boost=0;if(g.boost===0)g.boostExhausted=true;}
+  else if(g.boostUnlocked&&!boostRequested)g.boost=Math.min(100,g.boost+dt*20);
   reveal(g);
 }
 export function interact(g: Game): void {
   const chest=g.chests.find(c=>!c.open && distance(g.player,c)<1.3);
-  if(chest) { chest.open=true; if(!chest.rare) g.supplies++; g.message=`Found ${chest.name.toLowerCase()}. ${chest.story}${chest.rare ? " ★ Rare relic collected!" : " +1 supply."}`; return; }
+  if(chest===g.chests[3]&&!g.finished) {g.message="Treasure map sealed. Open both outposts to claim it.";return;}
+  if(chest) { chest.open=true; if(!chest.rare) g.supplies++;
+    if(chest===g.chests[0])g.boostUnlocked=true;
+    if(chest===g.chests[3])g.treasureMap=true;
+    recordFinalCompletion(g);
+    g.message=`Found ${chest.name.toLowerCase()}. ${chest.story}${chest.rare ? " ★ Rare relic collected!" : " +1 supply."}`; return; }
   const post=g.outposts.find(o=>!o.open && distance(g.player,o)<1.5);
   if(!post) { g.message="Move closer to a chest or red outpost, then press Space / E."; return; }
   if(post.hits===0) {
@@ -86,13 +107,21 @@ export function interact(g: Game): void {
   if(post.hits<3) { g.message=`Seal weakening: ${post.hits}/3 pulses. Press again.`; return; }
   post.open=true; reveal(g);
   g.finished=g.outposts.every(o=>o.open);
+  recordFinalCompletion(g);
   if(g.finished && !g.completion) g.completion={elapsed:g.elapsed,distance:g.distance,chests:g.chests.filter(c=>c.open).length};
-  g.message=g.finished ? "Both outposts are lit. You win! Keep exploring for the remaining relics." : "Outpost opened! Your torch reaches farther. A new destination is on the compass.";
+  g.message=g.finished ? "Both outposts are lit. Outposts secured! Claim the treasure map nearby and keep exploring." : "Outpost opened! Your torch reaches farther. A new destination is on the compass.";
 }
 
 export function shouldShowCompass(g: Game): boolean {
-  const target=g.outposts.find(p=>!p.open);
+  const target=compassTarget(g);
   if(!target)return false;
   const inViewport=Math.abs(target.x-g.player.x)<8 && Math.abs(target.y-g.player.y)<6;
   return !inViewport || visibility(g,Math.floor(target.x),Math.floor(target.y))==="hidden";
+}
+export function compassTarget(g: Game): Point | undefined {
+  return g.outposts.find(p=>!p.open) ?? (g.treasureMap?g.chests.find(c=>c.rare&&!c.open):undefined);
+}
+export function hasEverything(g: Game): boolean {return g.outposts.every(p=>p.open)&&g.chests.every(c=>c.open);}
+function recordFinalCompletion(g:Game):void {
+  if(hasEverything(g)&&!g.finalCompletion)g.finalCompletion={elapsed:g.elapsed,distance:g.distance,chests:g.chests.length};
 }

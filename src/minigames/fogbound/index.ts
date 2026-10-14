@@ -1,13 +1,14 @@
 import { h, s } from "../../lib/dom";
 import type { Minigame } from "../types";
-import { createGame, move, interact, radius, visibility, WORLD, shouldShowCompass } from "./game";
+import { createGame, move, interact, radius, visibility, WORLD, shouldShowCompass, compassTarget, hasEverything } from "./game";
 import "./fogbound.css";
 
 function mount(el: HTMLElement): () => void {
   let game=createGame(true), running=false, paused=false;
   const keys=new Set<string>();
   let feedback: {x:number;y:number;age:number;color:string} | null=null;
-  let victoryShown=false;
+  let victoryShown=false,finalShown=false,boostHeld=false;
+  let directionPointer:number|null=null,boostPointer:number|null=null;
   let pointerDirection: [number,number]=[0,0];
   const fog=h("input",{type:"checkbox",checked:true,"data-mechanic":"fog-of-war"});
   const start=h("button",{type:"button","data-start":"",class:"fog-primary"},"Take torch & compass");
@@ -19,12 +20,16 @@ function mount(el: HTMLElement): () => void {
   const hud=h("div",{class:"fog-hud"});
   const collected=h("progress",{max:8,value:0,"aria-label":"Collected treasures"});
   const hudText=h("span",{});hud.append(hudText,collected);
+  const boostMeter=h("progress",{max:100,value:100,"aria-label":"Boost energy"});
+  const boostReadout=h("span",{});
+  const boostHud=h("div",{class:"fog-boost-hud",hidden:true},boostReadout,boostMeter);
   const prompt=h("div",{class:"fog-prompt",hidden:true,"data-prompt":""});
   const toast=h("div",{class:"fog-toast",role:"status","data-reward":""});
   const resume=h("button",{type:"button",class:"fog-resume","data-resume":"",hidden:true},"Paused · Click to resume");
   const entry=h("button",{type:"button",class:"fog-resume fog-entry","data-entry":""},
     h("strong",{},"Click to start"),h("span",{},"WASD / arrows · Move"),h("span",{},"E / Space · Open chests & pulse outposts"),h("small",{},"Find supplies. Open both outposts. Keep exploring."));
-  const win=h("div",{class:"fog-win",hidden:true},"You win! Keep exploring.");
+  const win=h("div",{class:"fog-win",hidden:true},"You win! Outposts secured.");
+  const finalWin=h("div",{class:"fog-final-win",hidden:true,role:"status"},h("strong",{},"You got everything!"),h("span",{},"Both outposts · All eight treasures"));
   const defs=s("defs");
   const world=s("g"); const tiles: SVGRectElement[]=[];
   for(let y=0;y<WORLD.height;y++) for(let x=0;x<WORLD.width;x++) {
@@ -34,15 +39,20 @@ function mount(el: HTMLElement): () => void {
   const halo=s("circle",{cx:8,cy:6,r:2.8,fill:"none",stroke:"#f6d583","stroke-width":0.025,opacity:0.5});
   const player=s("circle",{cx:8,cy:6,r:0.2,fill:"#fff4c8",stroke:"#ac792d","stroke-width":0.06});
   const compass=s("g");
-  svg.append(defs,world,halo,player,compass); board.append(svg,hud,prompt,toast,win,resume,entry);
+  svg.append(defs,world,halo,player,compass); board.append(svg,hud,boostHud,prompt,toast,win,finalWin,resume,entry);
   const legend=h("p",{class:"fog-legend"},"Gold: chest · Red: sealed outpost · Blue: opened · Dim: explored terrain");
   const action=h("button",{type:"button",class:"fog-primary","data-interact":""},"Pulse / open chest");
+  const boostButton=h("button",{type:"button",class:"fog-boost-button","data-boost":"",hidden:true},"Hold Boost · Shift");
+  boostButton.addEventListener("pointerdown",e=>{if(running&&!paused&&game.boostUnlocked){e.preventDefault();boostHeld=true;boostPointer=e.pointerId;}});
+  boostButton.addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter"||e.key==="Shift")&&running&&!paused){e.preventDefault();boostHeld=true;}});
+  boostButton.addEventListener("keyup",()=>{boostHeld=false;});
+  boostButton.addEventListener("blur",()=>{boostHeld=false;});
   const pad=h("div",{class:"fog-pad","aria-label":"Movement controls"});
   const buttons: [string,number,number][]=[["↖",-1,-1],["↑",0,-1],["↗",1,-1],["←",-1,0],["·",0,0],["→",1,0],["↙",-1,1],["↓",0,1],["↘",1,1]];
   for(const [label,dx,dy] of buttons) {
     const btn=h("button",{type:"button","aria-label":dx===0&&dy===0 ? "Stop" : `Move ${dy<0?"north":dy>0?"south":""}${dx<0?"west":dx>0?"east":""}`},label);
-    btn.addEventListener("pointerdown",e=>{e.preventDefault(); if(running&&!paused) { pointerDirection=[dx,dy]; move(game,dx,dy,0.12); render(); } });
-    btn.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ") { e.preventDefault(); if(running&&!paused) {move(game,dx,dy,0.25);render();} }});
+    btn.addEventListener("pointerdown",e=>{e.preventDefault(); if(running&&!paused) { directionPointer=e.pointerId;pointerDirection=[dx,dy]; move(game,dx,dy,0.12,boostHeld||keys.has("Shift")||e.shiftKey); render(); } });
+    btn.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ") { e.preventDefault(); if(running&&!paused) {move(game,dx,dy,0.25,boostHeld||keys.has("Shift")||e.shiftKey);render();} }});
     pad.append(btn);
   }
   const journal=h("ul",{class:"fog-journal"});
@@ -57,7 +67,7 @@ function mount(el: HTMLElement): () => void {
       h("label",{class:"fog-toggle"},fog," Fog of war")),
     h("p",{class:"fog-instructions"},"Open chests for supplies. Each outpost uses 1 supply and takes 3 pulses. Find 8 treasures, including 2 hidden stars. WASD / arrows: move · Space / E: interact. Mouse and touch: hold direction buttons."),
     board,counts,status,
-    h("div",{class:"fog-controls"},pad,h("div",{class:"fog-actions"},action,start,pause)),legend,h("details",{},h("summary",{},"Collected relics"),journal),reflection);
+    h("div",{class:"fog-controls"},pad,h("div",{class:"fog-actions"},action,boostButton,start,pause)),legend,h("details",{},h("summary",{},"Collected relics"),journal),reflection);
   el.append(root);
   let lastMessage="";
   function render(): void {
@@ -76,6 +86,13 @@ function mount(el: HTMLElement): () => void {
     entities.replaceChildren();
     hudText.textContent=`Treasures ${game.chests.filter(c=>c.open).length}/${game.chests.length} · Supplies ${game.supplies} · Outposts ${game.outposts.filter(p=>p.open).length}/2`;
     collected.value=game.chests.filter(c=>c.open).length;
+    boostHud.hidden=!game.boostUnlocked;boostButton.hidden=!game.boostUnlocked;
+    boostButton.disabled=!running||paused;
+    boostMeter.value=game.boost;
+    boostReadout.textContent=`${game.boosting?"Boosting":"Boost"} ${Math.ceil(game.boost)}% · Shift · Release to recharge`;
+    player.setAttribute("fill",game.boosting?"#a9efff":"#fff4c8");
+    if(hasEverything(game)&&!finalShown){finalShown=true;finalWin.hidden=false;win.hidden=true;}
+
     if(collected.value!==journalCount) {
       journalCount=collected.value;
       journal.replaceChildren(...game.chests.filter(c=>c.open).map(c=>h("li",{},`${c.rare?"★ ":""}${c.name}: ${c.story}`)));
@@ -84,7 +101,7 @@ function mount(el: HTMLElement): () => void {
     const nearChest=game.chests.find(c=>!c.open&&Math.hypot(c.x-game.player.x,c.y-game.player.y)<1.3);
     const nearPost=game.outposts.find(p=>!p.open&&Math.hypot(p.x-game.player.x,p.y-game.player.y)<1.5);
     prompt.hidden=!running||paused||(!nearChest&&!nearPost);
-    prompt.textContent=nearChest?`E / Space · Open ${nearChest.rare?"star relic":"chest"}`:nearPost?(nearPost.hits===0?`E / Space · Activate · 1 supply ${game.supplies?"":"needed"}`:`E / Space · Pulse · ${nearPost.hits}/3`):"";
+    prompt.textContent=nearChest?nearChest===game.chests[3]&&!game.finished?"Treasure map · Open both outposts first":`E / Space · Open ${nearChest.rare?"star relic":nearChest===game.chests[3]?"treasure map":"chest"}`:nearPost?(nearPost.hits===0?`E / Space · Activate · 1 supply ${game.supplies?"":"needed"}`:`E / Space · Pulse · ${nearPost.hits}/3`):"";
     const nearby=nearChest??nearPost;
     if(nearby) {prompt.style.left=`${Math.max(25,Math.min(75,(8+nearby.x-game.player.x)/16*100))}%`;prompt.style.top=`${(6+nearby.y-game.player.y-0.5)/12*100}%`;}
     resume.hidden=!paused;entry.hidden=running;
@@ -113,7 +130,7 @@ function mount(el: HTMLElement): () => void {
         s("text",{x:c.x,y:c.y+0.65,"text-anchor":"middle","font-size":0.25,fill:"#ffe1a2"},c.open?c.name:c.rare?"★ Star relic":"Chest")); entities.append(marker);
     }
     compass.replaceChildren();
-    const target=game.outposts.find(p=>!p.open);
+    const target=compassTarget(game);
     if(target && shouldShowCompass(game)) {
       const dx=target.x-game.player.x,dy=target.y-game.player.y;
       const scale=Math.max(Math.abs(dx)/6.7,Math.abs(dy)/4.7,1);
@@ -134,7 +151,7 @@ function mount(el: HTMLElement): () => void {
     }
   }
   const directions: Record<string,[number,number]>={w:[0,-1],ArrowUp:[0,-1],s:[0,1],ArrowDown:[0,1],a:[-1,0],ArrowLeft:[-1,0],d:[1,0],ArrowRight:[1,0]};
-  const clear=()=>{keys.clear();pointerDirection=[0,0];game.speed=0;game.velocity={x:0,y:0};};
+  const clear=()=>{keys.clear();pointerDirection=[0,0];game.speed=0;game.velocity={x:0,y:0};game.boosting=false;boostHeld=false;directionPointer=null;boostPointer=null;};
   function setPaused(value:boolean):void {
     if(!running)return;
     paused=value;clear();pause.textContent=value?"Resume":"Pause";render();
@@ -157,9 +174,13 @@ function mount(el: HTMLElement): () => void {
   const outside=(e:Event)=>{if(!root.contains(e.target as Node))setPaused(true);};
   document.addEventListener("pointerdown",outside);
   const loseFocus=()=>setPaused(true);
-  const releasePointer=()=>{pointerDirection=[0,0];};
+  const releasePointer=(e:PointerEvent)=>{
+    if(e.pointerId===directionPointer){pointerDirection=[0,0];directionPointer=null;}
+    if(e.pointerId===boostPointer){boostHeld=false;boostPointer=null;}
+  };
   board.addEventListener("keydown",e=>{
     const k=e.key.length===1?e.key.toLowerCase():e.key;
+    if(k==="Shift") {e.preventDefault();keys.add(k);}
     if(directions[k]) {e.preventDefault();keys.add(k);}
     if((k===" "||k==="e")&&!e.repeat&&running&&!paused) {e.preventDefault();performInteraction();}
   });
@@ -172,10 +193,10 @@ function mount(el: HTMLElement): () => void {
   document.addEventListener("visibilitychange",visibilityChange);
   function begin():void {
     // Focus before hiding a focused overlay, avoiding a null-target blur pause.
-    board.focus();game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=true;paused=false;clear();start.textContent="Restart expedition";pause.disabled=false;pause.textContent="Pause";render();
+    board.focus();game=createGame(fog.checked);feedback=null;victoryShown=false;finalShown=false;finalWin.hidden=true;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=true;paused=false;clear();start.textContent="Restart expedition";pause.disabled=false;pause.textContent="Pause";render();
   }
   start.addEventListener("click",begin);
-  fog.addEventListener("change",()=>{game=createGame(fog.checked);feedback=null;victoryShown=false;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=false;paused=false;clear();start.textContent="Take torch & compass";pause.disabled=true;pause.textContent="Pause";render();});
+  fog.addEventListener("change",()=>{game=createGame(fog.checked);feedback=null;victoryShown=false;finalShown=false;finalWin.hidden=true;win.hidden=true;win.classList.remove("fog-win-enter");toast.replaceChildren();running=false;paused=false;clear();start.textContent="Take torch & compass";pause.disabled=true;pause.textContent="Pause";render();});
   pause.addEventListener("click",()=>{paused=!paused;clear();pause.textContent=paused?"Resume":"Pause";render();if(!paused)board.focus();});
   action.addEventListener("click",()=>{if(running&&!paused) {performInteraction();board.focus();}});
   let lastTick=Date.now();
@@ -183,9 +204,9 @@ function mount(el: HTMLElement): () => void {
     const now=Date.now(),seconds=(now-lastTick)/1000;lastTick=now;
     if(!running||paused) return;
     let [dx,dy]=pointerDirection;
-    for(const k of keys) {dx+=directions[k][0];dy+=directions[k][1];}
+    for(const k of keys) {if(directions[k]){dx+=directions[k][0];dy+=directions[k][1];}}
     if(feedback) {feedback.age+=seconds;if(feedback.age>0.7)feedback=null;}
-    move(game,Math.sign(dx),Math.sign(dy),Math.min(seconds,0.1));game.elapsed+=seconds;render();
+    move(game,Math.sign(dx),Math.sign(dy),Math.min(seconds,0.1),boostHeld||keys.has("Shift"));game.elapsed+=seconds;render();
   },16);
   render();
   return ()=>{clearInterval(timer);window.removeEventListener("blur",loseFocus);window.removeEventListener("pointerup",releasePointer);window.removeEventListener("pointercancel",releasePointer);document.removeEventListener("pointerdown",outside);document.removeEventListener("visibilitychange",visibilityChange);root.remove();};
