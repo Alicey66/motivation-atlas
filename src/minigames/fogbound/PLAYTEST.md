@@ -1,129 +1,72 @@
-# Playtesting — student self-test recorded; other-person comparison pending
+# Fogbound playtest evidence
 
-AI-use disclosure: Codex drafted the protocol. Only the student and a real player may supply observations.
+## Design rationale — student account
 
-Student rationale (paraphrase of the student's account): I like exploring without a guide, finding optional chests, and doing exploration work early so its rewards make later play easier. Fogbound focuses on discovery, supported by collection and sight upgrades.
+The student enjoys finding optional chests without a guide, uncovering hidden content and exploring before main objectives in GTA and Genshin Impact. Early exploration feels rewarding when it makes later objectives easier. Fogbound translates that preference into torchlight, dim remembered terrain, optional collectibles and sight upgrades. Discovery is the focal motivator; collection and progression support it. Only fog of war is toggled in the comparison.
 
-## Another-person session, about 6–8 minutes
+The student later clarified that muted terrain also draws on their memory of grey routes in Forza Horizon, including their remembered relationship to exploration and fast travel. This is a personal inspiration account, not a verified claim about Forza Horizon’s rules. Codex suggested retaining dim exploration memory; the student kept it and connected it to this inspiration. The student directed the camera, movement, chest rewards, Boost, staged quests and completion feedback. These are design intentions, separate from player observations.
 
-1. Open the Discovery page. Read only the controls and goal; do not tell the player which feelings to expect.
-2. Start with Fog of war checked. Let the other person play unassisted. Record time, relic count, route choices, pauses, and any help or technical problems. If unfinished after two minutes, record that; allow completion or stop honestly.
-3. Ask: “What did you feel?” and “What made you decide where to go?” Record their words without leading them.
-4. Uncheck Fog of war (resets the run). The same person plays again, with the same map, rewards and controls.
-5. Ask the same questions, then “What changed?” and “How much did remembering the first round help?”
-6. Do not collect names or identifying information. Update README Dynamic and Aesthetic from the actual observations. A student self-test or assistant browser check is separate evidence and does not satisfy this requirement.
+## Another-person ON → OFF comparison — completed
 
-## Evidence to fill after the session
+Evidence: a 5 minute 28 second audio recording, its Gemini 3.6 Flash (high) transcript, and the student's follow-up confirmations. Participants are anonymous. The audio/transcript are retained privately outside this repository. The recording includes gameplay silence and conversation; its length is not either round's game duration. A few transcription words are unclear and excluded from conclusions.
 
-Status: Not conducted. No observations, quotations or feeling ratings recorded.
+The student confirmed fog ON first, fog OFF second, Restart each time, and the same final goal: open both outposts and collect all eight treasures. The OFF round was **10 seconds faster**, a confirmed test result supplied by the student. Individual absolute times were not recorded. The prototype is documented at branch revision 17acd00; the recording does not independently expose a revision identifier.
 
-| Evidence | Fog on | Fog off |
+| Evidence | Fog ON | Fog OFF |
 | --- | --- | --- |
-| Duration and completion | Pending | Pending |
-| Outposts / relics | Pending | Pending |
-| Detours and decisions | Pending | Pending |
-| Player's own feeling words | Pending | Pending |
-| Assistance / errors | Pending | Pending |
+| Goal reached | Both outposts and all eight treasures | Same goal completed |
+| Completion time | Absolute time unrecorded | 10 seconds faster than ON; absolute time unrecorded |
+| Navigation | Player said they followed the arrows | Arrows still guided play; player said they would collect items first |
+| Obstacles | Terrain restricted by torch visibility | Designer observed distant walls/obstacles visible early enough to avoid |
+| Feelings | Later described some exploration feeling | Initially little difference; later described no-fog play as less interesting |
+| Assistance/usability | Controls explained; player questioned boots, outpost purpose and brief Boost duration | Designer offered an inventory/chest hint while player sought Boost |
 
-Same-map order is required on then off by the assignment; memory and practice can influence the comparison. This single small session cannot isolate fog's effect from learning or generalize to all players.
+### Player words and question context
 
-## Assistant checks
+Selected short English translations from the Chinese transcript:
 
-Checked 2026-10-13 (America/New_York):
+- Asked how they chose a direction: “Aren’t there arrows?”
+- First asked to compare feelings: “I don’t really feel anything different, because both have little arrows guiding you.”
+- After the designer explained discovery and asked whether fog produced exploration: “Maybe a little. Without fog, it’s much less interesting.”
 
-- Before implementation: existing suite 98 tests passed.
-- After implementation and input-focus fix: `npm test` — 108 tests passed across 20 files, including 8 Fogbound tests.
-- `npm run typecheck` and `npm run build` passed.
-- `npm run e2e` — 16 upstream browser tests passed. These cover desktop and phone, but do not include the new Discovery game page.
-- Separate assistant browser check on Discovery: game mounts and starts; direction control changes player position; fog toggle resets position/mode; at 390×844 viewport, document width 375 <= viewport width 390, no horizontal overflow. Screenshot inspected.
-- The first local-server/e2e attempts were blocked by sandbox port restrictions; the same commands ran with approved local-listening permissions and succeeded.
-- At the time of these engineering checks, no human run, completion-time measurement or player-feeling observation had been recorded. The later student self-test is recorded separately below. Automated reachability checks establish that all chests and outposts can be reached, not that their placement is enjoyable.
+The first comparison was relatively open; the later exploration question was leading. The designer also announced that the mechanic had succeeded, after which the player agreed. That agreement is not presented as an independent finding.
 
-These checks establish engineering behavior, not enjoyment or human feelings. PR CI is pending until an authorized PR exists.
+### Interpretation
 
+The confirmed speed difference and earlier obstacle visibility describe the observed comparison. Shared arrow guidance remained a strong influence on navigation, and the initial feeling comparison was weak. Later comments favor fog's exploration atmosphere but followed an explanation of the intended effect. The student also noted familiarity with the map in the second round. These observations support a qualified MDA reflection rather than a universal claim about Discovery.
 
-## Student self-test feedback — 2026-10-13, prototype ac06930
+No detailed route trace or counts of detours were recorded. Absolute round duration remains unknown, so the assignment's minute-or-two scale has not been verified by measured human timing. Two-outpost completion is the main objective; full collection is the tested final goal and remains available afterward.
 
-Provenance: student-reported in this chat, paraphrased by Codex. This is the designer's self-test, not another-person playtest. No measured duration, complete route, relic count, or explicit paired fog-off run was supplied. It does not fill the pending comparison table above.
+## Student self-test — separate evidence
 
-Reported observations:
+The designer's earlier prototype self-test reported unclear chest meaning, weak reward feedback, unexplained three-hit outposts, focus/resume frustration, slow movement and stopping play at the first win. They preferred dim remembered terrain and felt fog encouraged exploration. These are designer observations, not the other-person comparison above.
 
-- Chest purpose and interaction were unclear. The student wanted E / Space prompts inside the game viewport near the chest. On opening, the main visible change was the chest losing its fill; no clear reward or player animation was noticed.
-- Clicking outside the viewport caused uncertainty about how to resume keyboard movement. The student also reported apparent freezes resolved by Restart expedition, and described this as frustrating. The exact trigger of each freeze is not established.
-- Three outpost hits felt arbitrary and poorly signposted. The student wanted a nearby prompt, visible three-step progress, hit reactions and an opening effect.
-- Opening the second outpost halted play. The student wanted a win announcement followed by continued movement and optional chest collection.
-- Movement felt somewhat slow. The student suggested a slightly faster speed, brief acceleration and almost immediate stopping, without noticeable drift.
-- Dim remembered terrain was preferred to fully black terrain after leaving. Fog was reported to encourage exploring the map. This is the student's perception, not a measured causal on/off result.
-- Walls were considered useful for finding chests.
+Subsequent user-directed revisions added in-world prompts, reward/hit feedback, supply costs, focus-loss pause and click-to-resume, start entry, brief movement easing, continued collection, rechargeable Boost, treasure-map guidance, staged quests and an immediately updating collection bar. The final user-approved guidance marks both remaining stars after the map, then remaining chests after collecting the stars.
 
-Ideas proposed by the student, not observed features:
+## Assistant technical checks — separate evidence
 
-- Chest-opening particles or pop-out rewards, player feedback, and more functional chest rewards.
-- Outpost text/hit scaling and a burst on the third hit.
-- A centered You Win announcement shrinking into a corner while free exploration continues.
-- An optional alternative: collected chest resources charge a three-segment outpost bar. This would change core progression and is not approved as the next design.
+Latest implementation checks on 2026-10-13: 125 tests passed across 20 files, including 25 Fogbound tests; typecheck and build passed. The existing 16 desktop/phone e2e tests passed; they do not include a full Discovery-game run.
 
-Assistant code inspection (separate from observations): keyboard handlers are scoped to the focusable board; leaving it stops keyboard control. Hiding the document sets paused=true, with Resume currently outside the viewport. Completion explicitly disables move/interact and skips the update loop. Chest interactions do update relic state, counter and a story message, but the message is below the viewport; no in-world prompt or opening animation exists. These facts explain several reported symptoms but do not establish the trigger of every reported freeze.
+Separate assistant browser checks verified start/resume focus, chest rewards, Boost energy, fog reset, staged quests, two-star guidance progressing to remaining-chest guidance and full completion. The page had no horizontal overflow at a 390px viewport. Scripted traversal timing is not human evidence. Rules tests cover visibility/memory, movement, resources, recharge, quest navigation and completion. Read-only review reported no demonstrated correctness issue in staged-quest changes.
 
+No PR exists, so PR CI is pending. These checks do not measure fun or player feelings.
 
-## Approved second revision — 2026-10-13
+## Submission status
 
-User approved a local iteration: in-world prompts, feedback, focus-loss pause and click-to-resume, faster movement with brief acceleration and immediate stopping, and continued collecting after win. The user additionally suggested supplies for outposts and more corner collectibles. Implemented small version: 6 ordinary supply chests and 2 optional star relics; first pulse at each outpost consumes one supply, next two pulses cost none. No relic speed bonuses yet. Two ordinary chests are required for victory; remaining collection is optional. These rules are identical with fog on and off.
+Human ON/OFF evidence is recorded; README uses actual behavior and feelings. Remaining: measured round duration if available, review and authorize PR contents, commit/push documentation when authorized, create PR, confirm CI, and student submission of the PR URL to CourseWorks. No identifying player details or recording files belong in the PR.
 
-Technical evidence (assistant, not new human observations): 112 tests across 20 files passed, including 12 Fogbound tests; typecheck and build passed. Upstream e2e: 16 passed (not specific to Discovery). Actual browser: near-chest prompt appears inside viewport; opening updates treasures to 1/8, supplies to 1 and shows a reward message/burst; clicking outside shows paused overlay; clicking resume preserves player coordinates and inventory. New page has no horizontal overflow at 390px. Independent read-only review found no blocking issue.
+Documentation verification on 2026-10-14: npm test passed all 125 tests; npm run build passed; git diff --check passed. Only README and PLAYTEST were edited in the game repository during this documentation task. No commit, push or PR.
 
-Known scope: stars are collectible, not power-ups. Timing and enjoyment of this revision have not been measured by a human. First-win statistics are frozen; later exploration continues separately. This revision has not been pushed and no PR has been opened.
+## Later design clarification and future directions — student account
 
+The student imagined dim terrain as remembered information: it would preserve the last observed state while changes outside current sight remained unknown until revisiting. The current implementation retains dim explored terrain, but does not simulate a changing world or store stale snapshots of objects.
 
-### Pause-overlay regression — 2026-10-13
+Future ideas, not implemented or tested in this submission:
 
-Student reported that clicking the paused viewport failed while the lower Resume button worked. Assistant reproduced it in the in-app browser: overlay remained visible and status paused after clicking. Root cause: hiding the focused overlay generated a null-target focusout, which re-paused the game before board.focus ran. Fix transfers focus to the board before hiding the overlay. Regression test reproduced the browser-specific hiding/focusout side effect at the DOM boundary and failed before the fix, passed after. Actual browser recheck: overlay click resumed; direction input moved x from 3.5 to 3.932; clicking outside then the overlay again preserved x=3.932 and resumed. Full suite 113 tests passed; typecheck and build passed. No new human-experience evidence, no push or PR.
+- Give more treasures functional effects beyond descriptive text; current Boost and treasure-map items already have functions.
+- Change parts of the map when treasures are opened, creating surprise behind the fog.
+- Explore constrained random map changes while preserving reachable objectives and manageable difficulty.
 
+These are possible later experiments, not findings from this playtest. The current ON/OFF comparison keeps the layout fixed. Any later changing-map version should use the same change rules and randomness in both modes if fog remains the tested mechanic.
 
-### Compass visibility refinement — 2026-10-13
-
-Student requested hiding the edge compass when the destination flag is visible. Implemented: arrow remains for off-screen targets or on-screen targets still hidden by unexplored fog; it disappears for lit or remembered target markers inside the camera viewport. It reappears when the target is off-screen, and no arrow is shown when all outposts are open. Regression covers these states in both fog modes. 114 tests, typecheck and build passed. Local change only; no push or PR.
-
-
-### Movement easing iteration — 2026-10-13
-
-Student reported that start/stop acceleration did not feel effective and requested refinement. Replaced the short linear scalar ramp with exponential velocity easing: approach full speed over roughly 120ms, release easing time constant 18ms (maximum residual travel about 0.039 tiles), and continuous direction changes. Pause/focus-loss clears velocity immediately. Maximum speed remains 2.16 tiles/s; rewards, layout and fog rules are unchanged. Simulation updates every 16ms instead of 40ms, with unchanged tile colors skipped during DOM updates. This is a configured update interval, not measured guaranteed browser FPS.
-
-Regression tests failed on the previous abrupt-stop/reversal behavior before the fix. Full suite: 116 passed including 16 Fogbound tests; typecheck/build passed. Tests verify limited stopping travel, continuous reversal, diagonal normalization and equivalent displacement at different update frequencies. Subjective feel of this iteration still needs the student's next self-test; other-person comparison remains pending. Not pushed.
-
-
-### In-viewport start entry — 2026-10-13
-
-Student requested starting directly inside the freshly loaded game. Added a full-viewport Click to start button with WASD/arrows and E/Space instructions; clicking the viewport starts a new expedition and focuses movement. The lower equipment/restart button remains available. Changing fog returns to the start screen. Focus is transferred before the entry overlay is hidden, preserving the pause-overlay regression fix.
-
-Regression failed before the implementation; 117 tests (17 Fogbound), typecheck and build passed afterward. Actual browser: click entry hides start screen without pausing, direction input moves x from 3.5 to 3.978; reset returns to entry. This is an assistant technical check. No new human observations, no push or PR.
-
-
-## Two-item local revision — 2026-10-13
-
-Approved by student: first chest unlocks Shift Boost; energy recharges during ordinary walking. Last outpost completion unlocks the existing nearby treasure-map chest; its compass points to one remaining star at a time. Both outposts plus all eight treasures trigger You got everything. Other items deferred.
-
-Implemented tuning: maximum Boost speed 1.5× normal; full charge supports three seconds; ordinary walking restores 20% per second. No drain while idle or blocked; no recharge while idle or holding Boost. Exhaustion requires releasing Boost to allow walking recharge. The speed easing remains in place, and updates split exactly at depletion, with tiny floating-point residue clamped. Mouse/touch can hold the Boost button, with separate pointer IDs for movement and Boost. Stars found before obtaining the map are skipped by its guidance.
-
-Assistant evidence: 122 tests including 22 Fogbound tests, typecheck and build passed. Existing 16 desktop/phone e2e tests passed (not a full new-game run). Real browser check: nearest chest unlocks visible Boost meter; Shift-modified movement changes energy from 100% to 92%; 390px viewport has no horizontal overflow. Map lock, sequential star targeting, full-collection gate, pause cleanup, recharge/drain conditions and depletion update-frequency equivalence verified by rules tests. Independent review found no important issue; its minor depletion timing finding was fixed and regression-tested.
-
-No human timing or enjoyment observations for this version yet; other-person on/off comparison remains pending. Main-objective completion snapshots are retained separately from bonus collection; final collection records its own completion snapshot. No push or PR for this revision.
-
-
-### Boost idle recharge adjustment — 2026-10-13
-
-Student requested energy recovery while idle as well as while walking. Updated: after releasing Shift / Boost, energy recovers at 20% per second during walking or standing; paused time does not recharge. Holding Boost without movement neither drains nor recharges. HUD and instructions updated. Rules and mounted-input tests failed before the change and passed afterward, including idle recharge and frozen paused energy. Full suite 122 passed; typecheck/build passed. Local only, no push. This replaces the earlier walking-only recharge rule.
-
-
-## Staged quests and collection guidance — 2026-10-13
-
-User approved local-only refinement: initial quest shows outposts 0/2 without star/chest totals; stages advance through claim-map, collect-stars, remaining-chests, complete. Acquiring the map marks every uncollected star together; after all stars, every unopened ordinary chest is marked. Previous finds count without reopening. Hinted objects can be seen over fog, without revealing surrounding terrain; edge arrows hide individually when their markers are on-screen.
-
-Assistant technical evidence: 124 tests (24 Fogbound), typecheck/build passed; existing desktop/phone e2e 16 passed. Independent read-only review found no demonstrated correctness issue. Actual browser scripted direction-button traversal verified outposts1/2→claim map→stars with 2 arrows→1 star arrow after first pickup→remaining-chests quest→Exploration complete and visible You got everything. At 390px, page width375 <=viewport390. Restored fresh outposts0/2 for student replay.
-
-This traversal used scripted direction-button steps, so its displayed time is NOT a valid real-player round-duration measurement. No human experience observations for this revision were supplied; other-person on/off comparison remains pending. User explicitly requested no push or PR for this iteration.
-
-
-### Early collection-bar feedback — 2026-10-13
-
-Student reported an empty/non-updating upper-left bar during early chest/outpost play. Collection state was updating, but the staged-quest implementation hid the collection bar until the chest-cleanup stage. Removed that visibility restriction: the bar is present from startup and fills on every chest/star pickup. No numeric treasure total is printed; outpost progress remains separately shown in the current quest. Mounted regression verifies initial visibility and value0, first chest value1 while still in outposts0/2, and no 1/8 text. Failed before fix, passed after; full suite125, typecheck/build passed. Local only; no push or PR.
+The student further clarified that future terrain changes would generally preserve existing outpost and treasure positions. Given current completion progress and the desire for roughly minute-long play, these changes were deferred because they could add excessive difficulty. This is a scope decision and design concern, not a measured player-duration finding. The current map remains fixed.
