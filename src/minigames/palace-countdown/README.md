@@ -1,25 +1,15 @@
 # Palace Countdown
 
-Motivator: Challenge (mastering a repeatable escape route).
+Motivator: Challenge and mastery.
 
 ## Mechanic
 
-Escape through ten randomly chosen rooms (repeats allowed). Choose **Jump**, **Climb**, or **Run** to get past
-each obstacle. Each room has one successful action; the obstacle description
-shows the obstacle: a pit or gap calls for Jump, a high ledge for Climb,
-and a closing gate for Run. The three buttons are shuffled in each room. Use a mouse, touch, or Tab and Enter/Space.
+Escape through ten random rooms. In each, pick the action that beats the obstacle: Jump a pit, Climb a ledge, Run through a closing gate. The buttons shuffle every room.
 
-Set **Time limit**, then press **Begin escape**. With the clock on, you have
-3 seconds per room, shown as a shrinking bar. Each new room resets the timer
-to 3 seconds. Time reaching zero counts as a fall and ends the run.
-A wrong choice still costs 5 seconds, so with this shorter timer a wrong
-choice also causes a fall. With the clock off, there is no countdown or
-time penalty: try again until you pass. The clock starts only when you begin.
+**Time limit ON:** you get 3 seconds per room, shown as a shrinking bar. Running out or choosing wrong is a fall, and the run ends.
+**Time limit OFF:** no clock; a wrong choice just lets you try again.
 
-Changing the toggle resets the run and waits for you to begin again.
-**Restart escape** starts a fresh run with the current setting. Replay the
-game with both settings, then use the reflection box to compare how
-you felt.
+Press **Begin escape** to start, and play once each way.
 
 ## Dynamic
 
