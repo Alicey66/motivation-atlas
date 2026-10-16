@@ -15,26 +15,25 @@ movement and collection rules. **Replay these ruins** resets the round;
 
 ## Dynamic
 
-Human playtest pending: this section is not yet an observation report.
-The design hypothesis is that fog encourages scouting and backtracking,
-while a visible map encourages planning a direct collection route.
-After another person plays fog on, then off, replace this paragraph with
-their observed choices and round notes. Note whether map familiarity affected
-the second round; agent testing is not human playtest evidence.
+The intended dynamic is scouting and backtracking with fog, compared with
+planning a direct collection route when the map is visible. Each discovery
+can change the next destination. Previously revealed squares stay visible,
+so exploration gradually becomes route planning. Replaying the same layout
+also introduces map familiarity, which must be considered when comparing
+the two conditions. Playtest observations are pending.
 
 ## Aesthetic
 
-Human feedback pending. Ask what choosing a direction felt like in each
-condition and whether changing fog changed that feeling. Record the player's
-actual account, including unexpected preferences; omit their name and
-identifying details.
+The intended aesthetic is curiosity about unexplored space. A visible map
+may instead support a sense of control. These are design expectations;
+the player's reported feelings in each condition are pending.
 
 ## Sources
 
 The course note's Discovery section quotes "the strategic unveiling of hidden
 information adds suspense and tension" (Salen and Zimmerman 2003, ch. 17,
 "Hiding and Revealing Systems"). This is a hypothesis to test against play.
-Codex assisted design, implementation, and tests. I kept its suggestion that
+Codex assisted design and implementation. I kept its suggestion that
 fog change only visibility, leaving movement and rewards constant. Code uses
 the Atlas template and DOM helper; visuals use CSS and text without external
 assets.
