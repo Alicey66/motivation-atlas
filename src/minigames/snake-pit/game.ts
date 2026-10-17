@@ -21,7 +21,9 @@ export interface SnakeState {
   /** Segments still to add, one per move, after eating. */
   readonly growthPending: number;
   readonly direction: Direction;
+  /** All uncollected nests in reveal order, including those waiting for clearance. */
   readonly eggs: readonly Cell[];
+  readonly visibleEggs: readonly Cell[];
   readonly phase: "ready" | "playing" | "won" | "lost";
   readonly collision: "wall" | "clearance" | "body" | null;
   readonly steps: number;
@@ -38,7 +40,7 @@ export function widthFor(growth: boolean, eggsEaten: number): number {
 
 /** Either visible egg can be collected; the rest remain in a fixed reveal order. */
 export function activeEggs(state: SnakeState): readonly Cell[] {
-  return state.eggs.slice(0, 2);
+  return state.visibleEggs;
 }
 const VECTORS: Record<Direction, Cell> = {
   up: { x: 0, y: -1 }, right: { x: 1, y: 0 },
@@ -47,17 +49,30 @@ const VECTORS: Record<Direction, Cell> = {
 
 export const sameCell = (a: Cell, b: Cell): boolean => a.x === b.x && a.y === b.y;
 
+function revealEggs(state: SnakeState): SnakeState {
+  const visibleEggs = [...state.visibleEggs];
+  // Reserve the wider mode's clearance in BOTH modes so reveal timing stays equal.
+  const clearance = widthFor(true, state.maze.eggs.length - state.eggs.length) / 2 + 0.56;
+  for (const egg of state.eggs) {
+    if (visibleEggs.length === 2) break;
+    if (visibleEggs.some((visible) => sameCell(visible, egg))) continue;
+    if (state.body.some((cell) => Math.hypot(cell.x - egg.x, cell.y - egg.y) < clearance)) break;
+    visibleEggs.push(egg);
+  }
+  return { ...state, visibleEggs };
+}
+
 export function canTurn(current: Direction, requested: Direction): boolean {
   return VECTORS[current].x + VECTORS[requested].x !== 0
     || VECTORS[current].y + VECTORS[requested].y !== 0;
 }
 
 export function newGame(widthGrowth: boolean, maze: Maze = BURROW): SnakeState {
-  return {
+  return revealEggs({
     maze, widthGrowth, body: maze.start.map((cell) => ({ ...cell })), direction: maze.direction,
-    eggs: maze.eggs.map((cell) => ({ ...cell })), growthPending: 0, widths: maze.start.map(() => BASE_WIDTH),
+    eggs: maze.eggs.map((cell) => ({ ...cell })), visibleEggs: [], growthPending: 0, widths: maze.start.map(() => BASE_WIDTH),
     phase: "ready", collision: null, steps: 0,
-  };
+  });
 }
 
 export function startGame(state: SnakeState): SnakeState {
@@ -86,9 +101,10 @@ export function advance(state: SnakeState, requested: Direction = state.directio
   }
   const body = [head, ...occupied];
   const eggs = eating ? state.eggs.filter((_, index) => index !== eatenIndex) : state.eggs;
-  return {
+  return revealEggs({
     ...state, body, widths: [width, ...occupiedWidths], direction, eggs, steps: state.steps + 1,
+    visibleEggs: eating ? state.visibleEggs.filter((_, index) => index !== eatenIndex) : state.visibleEggs,
     growthPending: grows ? growthPending - 1 : 0,
     phase: eggs.length === 0 && sameCell(head, state.maze.exit) ? "won" : "playing",
-  };
+  });
 }

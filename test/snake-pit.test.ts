@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { snakePit } from "../src/minigames/snake-pit";
 import { activeEggs, advance, BURROW, MOVE_MS, newGame, startGame, widthFor, type Direction, type Maze, type SnakeState } from "../src/minigames/snake-pit/game";
 import { hitsBody, hitsWall } from "../src/minigames/snake-pit/geometry";
+import { ESCAPE_ROUTE as ESCAPE } from "../src/minigames/snake-pit/hint-route";
 
 const pickupMaze: Maze = {
   rows: Array.from({ length: 9 }, (_, y) => y === 0 || y === 8 ? "#".repeat(32) : `#${".".repeat(30)}#`),
@@ -12,13 +13,6 @@ const pickupMaze: Maze = {
   eggs: [{ x: 4, y: 4 }, { x: 5, y: 4 }, { x: 6, y: 4 }],
   exit: { x: 6, y: 5 },
 };
-
-// A complete route, including body clearance, through all six pickups at full width.
-const ESCAPE: readonly (readonly [Direction, number])[] = [
-  ["right", 12], ["down", 20], ["left", 2],
-  ["down", 2], ["right", 10], ["up", 23], ["left", 20],
-  ["down", 21], ["right", 22], ["up", 21], ["left", 22], ["down", 1],
-];
 
 function follow(state: SnakeState, route: readonly (readonly [Direction, number])[]): SnakeState {
   for (const [direction, steps] of route) {
@@ -107,6 +101,34 @@ describe("Snake Pit: the growth mechanic", () => {
     expect(activeEggs(state)).toHaveLength(1);
     expect(activeEggs(advance(state))).toHaveLength(0);
   });
+
+  it.each([true, false])("waits to reveal a nest under the body, then reveals it without awarding a pickup (%s)", (mode) => {
+    const maze = { ...pickupMaze, eggs: [{ x: 4, y: 4 }, { x: 8, y: 6 }, { x: 2, y: 4 }] };
+    const first = advance(startGame(newGame(mode, maze)));
+    expect(activeEggs(first)).toEqual([maze.eggs[1]]);
+    expect(first.eggs).toHaveLength(2);
+    const clear = follow(first, [["right", 20]]);
+    expect(clear.phase).toBe("playing");
+    expect(activeEggs(clear)).toEqual(maze.eggs.slice(1));
+    expect(clear.eggs).toHaveLength(2);
+    expect(clear.body).toHaveLength(21);
+  });
+
+  it("uses the same reveal timing in both modes, and never reveals an egg inside the body", () => {
+    let on = startGame(newGame(true));
+    let off = startGame(newGame(false));
+    for (const [direction, count] of ESCAPE) for (let i = 0; i < count; i++) {
+      const prior = activeEggs(on);
+      on = advance(on, direction);
+      off = advance(off, direction);
+      expect(activeEggs(on)).toEqual(activeEggs(off));
+      for (const egg of activeEggs(on).filter((egg) => !prior.some((old) => old.x === egg.x && old.y === egg.y))) {
+        expect(on.body.some((cell) => Math.hypot(cell.x - egg.x, cell.y - egg.y) < on.widths[0] / 2 + 0.52)).toBe(false);
+      }
+    }
+    expect(on.phase).toBe("won");
+    expect(off.phase).toBe("won");
+  });
 });
 
 describe("Snake Pit: width growth", () => {
@@ -151,7 +173,7 @@ describe("Snake Pit: width growth", () => {
       direction: "down" as const,
     };
     const state: SnakeState = {
-      ...startGame(newGame(mode, maze)), eggs: BURROW.eggs.slice(1),
+      ...startGame(newGame(mode, maze)), eggs: BURROW.eggs.slice(1), visibleEggs: BURROW.eggs.slice(1, 3),
       widths: [widthFor(mode, 1), 0.6, 0.6],
     };
     const next = advance(state);
@@ -239,7 +261,7 @@ describe("Snake Pit: the actual burrow", () => {
       ...Array.from({ length: 9 }, (_, i) => ({ x: 2, y: 25 - i })),
     ];
     const stateAtShortcut = (mode: boolean): SnakeState => ({
-      ...startGame(newGame(mode)), eggs: BURROW.eggs.slice(2), direction: "up",
+      ...startGame(newGame(mode)), eggs: BURROW.eggs.slice(2), visibleEggs: BURROW.eggs.slice(2, 4), direction: "up",
       body, widths: body.map(() => widthFor(mode, 2)),
     });
     expect(body).toHaveLength(39);
@@ -471,6 +493,63 @@ describe("Snake Pit: controls and lifecycle", () => {
     vi.advanceTimersByTime(16);
     expect(q("[data-phase]").getAttribute("data-phase")).toBe("paused");
     expect(q("[data-board]").getAttribute("data-steps")).toBe("0");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([true, false])("shows an optional 3× winning replay without advancing the player's round (%s)", (mode) => {
+    const { q } = setup();
+    if (!mode) q<HTMLInputElement>("[data-mechanic]").click();
+    const hint = q<HTMLDetailsElement>("[data-hint]");
+    expect(hint).not.toBeNull();
+    expect(hint.open).toBe(false);
+    hint.open = true;
+    hint.dispatchEvent(new Event("toggle"));
+    expect(q("[data-hint-status]").textContent).toContain(mode ? "ON" : "OFF");
+    expect(q("[data-hint-status]").textContent).toContain("3×");
+    vi.advanceTimersByTime(176 * MOVE_MS / 3 + 32);
+    expect(hint.getAttribute("data-hint-phase")).toBe("won");
+    expect(hint.querySelector("[data-board]")!.getAttribute("data-steps")).toBe("176");
+    expect(hint.querySelectorAll(".snake-pit-eggs ellipse")).toHaveLength(0);
+    expect(q("[data-phase]").getAttribute("data-phase")).toBe("ready");
+    expect(q("[data-board]").getAttribute("data-steps")).toBe("0");
+    expect(q("[data-eggs]").textContent).toBe("0 / 6");
+    expect(q("[data-reflect]").hidden).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("pauses the real round while watching, pauses the replay, and cleans it up on close and unmount", () => {
+    const { q, unmount } = setup();
+    q<HTMLButtonElement>("[data-action]").click();
+    vi.advanceTimersByTime(160);
+    const hint = q<HTMLDetailsElement>("[data-hint]");
+    expect(hint).not.toBeNull();
+    hint.open = true;
+    hint.dispatchEvent(new Event("toggle"));
+    expect(q("[data-phase]").getAttribute("data-phase")).toBe("paused");
+    vi.advanceTimersByTime(160);
+    q<HTMLButtonElement>("[data-hint-action]").click();
+    const step = hint.querySelector("[data-board]")!.getAttribute("data-steps");
+    vi.advanceTimersByTime(10_000);
+    expect(hint.querySelector("[data-board]")!.getAttribute("data-steps")).toBe(step);
+    q<HTMLButtonElement>("[data-hint-action]").click();
+    vi.advanceTimersByTime(80);
+    expect(Number(hint.querySelector("[data-board]")!.getAttribute("data-steps"))).toBeGreaterThan(Number(step));
+    window.dispatchEvent(new Event("blur"));
+    expect(hint.getAttribute("data-hint-phase")).toBe("paused");
+    expect(vi.getTimerCount()).toBe(0);
+    hint.open = false;
+    hint.dispatchEvent(new Event("toggle"));
+    expect(vi.getTimerCount()).toBe(0);
+    hint.open = true;
+    hint.dispatchEvent(new Event("toggle"));
+    expect(vi.getTimerCount()).toBe(1);
+    q<HTMLButtonElement>("[data-action]").click();
+    expect(hint.open).toBe(false);
+    expect(q("[data-phase]").getAttribute("data-phase")).toBe("playing");
+    expect(vi.getTimerCount()).toBe(1);
+    hint.open = true;
+    hint.dispatchEvent(new Event("toggle"));
+    unmount();
     expect(vi.getTimerCount()).toBe(0);
   });
 });

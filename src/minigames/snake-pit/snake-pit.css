@@ -18,9 +18,9 @@
 .snake-pit-exit rect { fill: var(--surface); stroke: var(--mech); stroke-width: 0.1; stroke-dasharray: 0.15 0.1; }
 .snake-pit-exit path { stroke: var(--mech); stroke-width: 0.12; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .snake-pit-exit[data-open="true"] rect { fill: var(--mech-soft); stroke-dasharray: none; stroke-width: 0.16; }
-.snake-pit[data-phase="lost"] .snake-pit-head { fill: var(--warn); }
-.snake-pit[data-phase="won"] .snake-pit-board { border-color: var(--dyn); }
-.snake-pit[data-phase="paused"] .snake-pit-board { opacity: 0.65; }
+.snake-pit[data-phase="lost"] > .snake-pit-board .snake-pit-head { fill: var(--warn); }
+.snake-pit[data-phase="won"] > .snake-pit-board { border-color: var(--dyn); }
+.snake-pit[data-phase="paused"] > .snake-pit-board { opacity: 0.65; }
 .snake-pit-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 0.75rem; color: var(--muted); }
 .snake-pit-status { margin: 0; min-height: 3.2em; text-align: center; font-size: 0.94rem; }
 .snake-pit-settings { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
@@ -44,6 +44,12 @@
 .snake-pit-reflect { border-left: 3px solid var(--aes); padding: 10px 14px; background: var(--aes-soft); border-radius: 0 8px 8px 0; }
 .snake-pit-reflect h4, .snake-pit-reflect p { margin: 0; }
 .snake-pit-reflect p { margin-top: 4px; font-size: 0.9rem; }
+.snake-pit-hint { width: 100%; border-top: 1px solid var(--line); padding-top: 10px; }
+.snake-pit-hint summary { color: var(--muted); cursor: pointer; min-height: 44px; padding-block: 10px; }
+.snake-pit-hint p { font-size: 0.85rem; margin: 8px 0; }
+.snake-pit-hint-board { max-width: 480px; margin-inline: auto; }
+.snake-pit-hint[data-hint-phase="won"] .snake-pit-board { border-color: var(--dyn); }
+.snake-pit-hint[data-hint-phase="paused"] .snake-pit-board { opacity: 0.65; }
 @media (prefers-reduced-motion: reduce) {
   .snake-pit *, .snake-pit *::before, .snake-pit *::after { animation: none; transition: none; }
 }

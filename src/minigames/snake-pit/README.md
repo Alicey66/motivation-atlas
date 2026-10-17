@@ -4,11 +4,12 @@ Motivator: Challenge and mastery. Author: jianyangg.
 
 ## Mechanic
 
-Collect six eggs, then reach the exit. Two are available at once: choose
-either, and another appears until only the last remains. Press **Start escape**.
-Steer with arrows, WASD, or direction buttons using a mouse or touchscreen.
-You keep moving and cannot reverse. Rocks, boundaries, and your body end
-the round. **Pause** or Space pauses; **Restart** resets.
+Collect six eggs, then reach the exit. Choose either of up to two visible
+eggs. New eggs wait until your tail clears their nest. **Start escape** begins;
+**Hint: watch a winning route · 3×** shows one way out.
+Steer with arrows, WASD, or mouse/touch direction buttons. Only the head
+collects eggs. You keep moving and cannot reverse. Rocks, boundaries, and
+your body end the round. **Pause** or Space pauses; **Restart** resets.
 
 Each egg adds 18 length segments in both modes. Set **Width growth** before
 starting: ON widens from 0.6 to 2.4 cells, with the new size following down
@@ -18,16 +19,16 @@ Speed, obstacles, egg reveal order, and objectives stay identical.
 
 ## Dynamic
 
-**Playtest pending.** Another person has not yet tried width growth ON, then
-OFF. Routes, collisions, and retries remain unrecorded. My prediction is
-that progress toward escape costs access to shortcuts and changes route
-choices. The one-to-two-minute target still needs a human playtest.
+**Playtest pending.** Another person’s routes, collisions, and retries with
+width growth ON, then OFF, remain unrecorded. I predict that progress toward
+escape costs access to shortcuts and changes route choices. The
+one-to-two-minute target still needs a human playtest.
 
 ## Aesthetic
 
 **Playtest pending.** No comments have been collected for either setting.
-Any claims about tension, frustration, or satisfaction will come from
-what that person says after trying both modes.
+Claims about tension, frustration, or satisfaction must come from
+what that person says after playing.
 
 ## Sources
 

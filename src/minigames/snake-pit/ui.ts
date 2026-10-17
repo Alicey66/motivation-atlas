@@ -1,6 +1,7 @@
 import { h } from "../../lib/dom";
 import { createBoard } from "./board";
-import { advance, canTurn, MOVE_MS, newGame, SEGMENTS_PER_EGG, startGame, type Direction, type SnakeState } from "./game";
+import { createHint } from "./hint";
+import { activeEggs, advance, canTurn, MOVE_MS, newGame, SEGMENTS_PER_EGG, startGame, type Direction, type SnakeState } from "./game";
 
 const ARROWS: Record<Direction, string> = { up: "↑", right: "→", down: "↓", left: "←" };
 const KEYS: Record<string, Direction | undefined> = {
@@ -38,6 +39,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
   const controls = h("p", { class: "snake-pit-help", id: `snake-pit-controls-${id}` }, "Arrows / WASD or tap the arrows. Space pauses. No reversing.");
   const boardView = createBoard(state, controls.id);
   const board = boardView.element;
+  const hint = createHint(id, () => growth.checked, pause);
 
   const buttons = new Map<Direction, HTMLButtonElement>();
   const dpad = h("div", { class: "snake-pit-dpad", role: "group", "aria-label": "Direction controls" });
@@ -61,7 +63,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
       h("span", {}, "⬭ Choose either egg"), h("span", {}, "▱ Striped gap = too narrow"), h("span", {}, `⇩ Exit at ${goal} eggs`)),
     status,
     h("div", { class: "snake-pit-play-controls" }, dpad, h("div", { class: "snake-pit-actions" }, action, restart)),
-    controls, reflection,
+    controls, reflection, hint.element,
   );
   el.append(root);
 
@@ -101,7 +103,8 @@ export function mountSnakePit(el: HTMLElement): () => void {
       : state.collision === "wall" ? "Hit a rock or boundary. Try a different turn." : "Caught in your own body. Try a wider loop.";
     else if (state.phase === "playing") message = open
       ? `All ${goal} eggs! Reach the exit at the top left.`
-      : state.widths[0] > 1 ? "Shortcuts are too narrow now. Follow the wider routes."
+      : activeEggs(state).length < Math.min(2, state.eggs.length) ? "A nest is waiting for your tail to clear. Keep a wide loop; only your head collects eggs."
+        : state.widths[0] > 1 ? "Shortcuts are too narrow now. Follow the wider routes."
         : `${state.eggs.length} ${state.eggs.length === 1 ? "egg" : "eggs"} to go. Leave room for your tail.`;
     if (status.textContent !== message) status.textContent = message;
     draw();
@@ -160,6 +163,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
 
   function primaryAction(): void {
     if (disposed) return;
+    hint.close();
     if (state.phase === "playing") {
       if (paused) {
         paused = false;
@@ -179,6 +183,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
 
   action.addEventListener("click", primaryAction, options);
   restart.addEventListener("click", () => {
+    hint.close();
     stopClock();
     state = newGame(growth.checked);
     movement = null;
@@ -187,6 +192,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
     render();
   }, options);
   growth.addEventListener("change", () => {
+    hint.close();
     if (state.phase === "ready") state = newGame(growth.checked);
     render();
   }, options);
@@ -209,6 +215,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
     disposed = true;
     stopClock();
     events.abort();
+    hint.dispose();
     root.remove();
   };
 }
