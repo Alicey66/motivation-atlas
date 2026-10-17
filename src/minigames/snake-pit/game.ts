@@ -1,3 +1,7 @@
+import { hitsBody, hitsWall } from "./geometry";
+import { BURROW } from "./burrow";
+export { BURROW } from "./burrow";
+
 export interface Cell { readonly x: number; readonly y: number }
 export type Direction = "up" | "right" | "down" | "left";
 export interface Maze {
@@ -10,37 +14,27 @@ export interface Maze {
 }
 export interface SnakeState {
   readonly maze: Maze;
-  readonly growth: boolean;
+  readonly widthGrowth: boolean;
   readonly body: readonly Cell[];
+  /** Width at each body cell; new size propagates from head to tail. */
+  readonly widths: readonly number[];
   /** Segments still to add, one per move, after eating. */
   readonly growthPending: number;
   readonly direction: Direction;
   readonly eggs: readonly Cell[];
   readonly phase: "ready" | "playing" | "won" | "lost";
-  readonly collision: "wall" | "body" | null;
+  readonly collision: "wall" | "clearance" | "body" | null;
   readonly steps: number;
 }
 
-/** One shared clock and layout; growth is the only rule that changes. */
+/** One shared clock and length rule; only width growth changes between modes. */
 export const MOVE_MS = 240;
-export const SEGMENTS_PER_EGG = 6;
-const ROCKS = [{ x: 5, y: 4 }, { x: 11, y: 11 }, { x: 4, y: 14 }];
-export const BURROW: Maze = {
-  rows: Array.from({ length: 21 }, (_, y) => Array.from({ length: 19 }, (_, x) => {
-    const rock = ROCKS.some((rock) => x >= rock.x && x < rock.x + 3 && y >= rock.y && y < rock.y + 3);
-    return x === 0 || x === 18 || y === 0 || y === 20 || rock ? "#" : ".";
-  }).join("")),
-  start: [{ x: 5, y: 1 }, { x: 4, y: 1 }, { x: 3, y: 1 }],
-  direction: "right",
-  // Fixed nests alternate across the arena. Only the first remaining egg is active.
-  eggs: [
-    { x: 17, y: 1 }, { x: 1, y: 19 }, { x: 16, y: 1 }, { x: 2, y: 19 },
-    { x: 17, y: 2 }, { x: 1, y: 18 }, { x: 15, y: 1 }, { x: 3, y: 19 },
-    { x: 17, y: 1 }, { x: 1, y: 19 }, { x: 17, y: 3 }, { x: 2, y: 19 },
-  ],
-  exit: { x: 1, y: 1 },
-};
+export const SEGMENTS_PER_EGG = 18;
+const BASE_WIDTH = 0.6;
 
+export function widthFor(growth: boolean, eggsEaten: number): number {
+  return growth ? Math.min(1.8, (6 + eggsEaten * 3) / 10) : BASE_WIDTH;
+}
 const VECTORS: Record<Direction, Cell> = {
   up: { x: 0, y: -1 }, right: { x: 1, y: 0 },
   down: { x: 0, y: 1 }, left: { x: -1, y: 0 },
@@ -53,10 +47,10 @@ export function canTurn(current: Direction, requested: Direction): boolean {
     || VECTORS[current].y + VECTORS[requested].y !== 0;
 }
 
-export function newGame(growth: boolean, maze: Maze = BURROW): SnakeState {
+export function newGame(widthGrowth: boolean, maze: Maze = BURROW): SnakeState {
   return {
-    maze, growth, body: maze.start.map((cell) => ({ ...cell })), direction: maze.direction,
-    eggs: maze.eggs.map((cell) => ({ ...cell })), growthPending: 0,
+    maze, widthGrowth, body: maze.start.map((cell) => ({ ...cell })), direction: maze.direction,
+    eggs: maze.eggs.map((cell) => ({ ...cell })), growthPending: 0, widths: maze.start.map(() => BASE_WIDTH),
     phase: "ready", collision: null, steps: 0,
   };
 }
@@ -71,20 +65,23 @@ export function advance(state: SnakeState, requested: Direction = state.directio
   const direction = canTurn(state.direction, requested) ? requested : state.direction;
   const delta = VECTORS[direction];
   const head = { x: state.body[0].x + delta.x, y: state.body[0].y + delta.y };
-  if (state.maze.rows[head.y]?.[head.x] !== ".") {
-    return { ...state, direction, phase: "lost", collision: "wall" };
-  }
   const eating = state.eggs[0] !== undefined && sameCell(head, state.eggs[0]);
-  const growthPending = state.growth ? state.growthPending + (eating ? SEGMENTS_PER_EGG : 0) : 0;
+  const width = widthFor(state.widthGrowth, state.maze.eggs.length - state.eggs.length + Number(eating));
+  if (hitsWall(state.maze.rows, state.body[0], head, width)) {
+    const collision = state.maze.rows[head.y]?.[head.x] === "." ? "clearance" : "wall";
+    return { ...state, direction, phase: "lost", collision };
+  }
+  const growthPending = state.growthPending + (eating ? SEGMENTS_PER_EGG : 0);
   const grows = growthPending > 0;
   const occupied = grows ? state.body : state.body.slice(0, -1);
-  if (occupied.some((cell) => sameCell(head, cell))) {
+  const occupiedWidths = grows ? state.widths : state.widths.slice(0, -1);
+  if (hitsBody(state.body[0], head, width, occupied, occupiedWidths)) {
     return { ...state, direction, phase: "lost", collision: "body" };
   }
   const body = [head, ...occupied];
   const eggs = eating ? state.eggs.slice(1) : state.eggs;
   return {
-    ...state, body, direction, eggs, steps: state.steps + 1,
+    ...state, body, widths: [width, ...occupiedWidths], direction, eggs, steps: state.steps + 1,
     growthPending: grows ? growthPending - 1 : 0,
     phase: eggs.length === 0 && sameCell(head, state.maze.exit) ? "won" : "playing",
   };
