@@ -20,7 +20,7 @@ Two reported Amber Court clears took 44 moves/14 backtracks with fog on and
 34/10 with fog off. The visible map supported advance planning, although
 replay familiarity also contributed. Feedback prioritized footprints to
 reduce uncertainty about previously visited corridors. These observations
-preceded that revision; a third run was unfinished.
+preceded that revision.
 
 ## Aesthetic
 
