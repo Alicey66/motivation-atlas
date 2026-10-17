@@ -18,16 +18,17 @@ one or two minutes.
 
 Two reported Amber Court clears took 44 moves/14 backtracks with fog on and
 34/10 with fog off. The visible map supported advance planning, although
-replay familiarity also contributed. Feedback prioritized footprints to
+replay familiarity may also have contributed. Feedback prioritized footprints to
 reduce uncertainty about previously visited corridors. These observations
 preceded that revision.
 
 ## Aesthetic
 
-Feedback described exploratory tension, satisfying turn-based pursuit, and
-breathing room while thinking. Repeated dead ends felt costly; footprints
-and route review address that concern. Earlier feedback requested moving
-monsters and clearer endings, leading to pursuit and victory confetti.
+With fog on, the unknown felt tense and exciting: a monster might be waiting
+just ahead. With fog off, the experience felt somewhat dull and too easy:
+the route could be planned immediately, removing much of the excitement.
+This contrast supports Discovery. Feedback also led to footprints, pursuit,
+and clearer endings.
 
 ## Sources
 
