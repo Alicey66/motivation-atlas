@@ -12,6 +12,8 @@ export interface SnakeState {
   readonly maze: Maze;
   readonly growth: boolean;
   readonly body: readonly Cell[];
+  /** Segments still to add, one per move, after eating. */
+  readonly growthPending: number;
   readonly direction: Direction;
   readonly eggs: readonly Cell[];
   readonly phase: "ready" | "playing" | "won" | "lost";
@@ -20,34 +22,22 @@ export interface SnakeState {
 }
 
 /** One shared clock and layout; growth is the only rule that changes. */
-export const MOVE_MS = 420;
+export const MOVE_MS = 240;
+export const SEGMENTS_PER_EGG = 6;
+const ROCKS = [{ x: 5, y: 4 }, { x: 11, y: 11 }, { x: 4, y: 14 }];
 export const BURROW: Maze = {
-  rows: [
-    "###################",
-    "#.................#",
-    "#.#############.#.#",
-    "#.#...............#",
-    "#.#..##############",
-    "#.#...............#",
-    "#.##############..#",
-    "#.#...............#",
-    "#.#.#.#############",
-    "#.................#",
-    "#.#############.#.#",
-    "#.#...............#",
-    "#.#..##############",
-    "#.#...............#",
-    "#.##############..#",
-    "#.#...............#",
-    "#.#.#.#############",
-    "#.#...............#",
-    "#.#############.#.#",
-    "#.................#",
-    "###################",
-  ],
+  rows: Array.from({ length: 21 }, (_, y) => Array.from({ length: 19 }, (_, x) => {
+    const rock = ROCKS.some((rock) => x >= rock.x && x < rock.x + 3 && y >= rock.y && y < rock.y + 3);
+    return x === 0 || x === 18 || y === 0 || y === 20 || rock ? "#" : ".";
+  }).join("")),
   start: [{ x: 5, y: 1 }, { x: 4, y: 1 }, { x: 3, y: 1 }],
   direction: "right",
-  eggs: [{ x: 9, y: 5 }, { x: 11, y: 11 }, { x: 9, y: 17 }],
+  // Fixed nests alternate across the arena. Only the first remaining egg is active.
+  eggs: [
+    { x: 17, y: 1 }, { x: 1, y: 19 }, { x: 16, y: 1 }, { x: 2, y: 19 },
+    { x: 17, y: 2 }, { x: 1, y: 18 }, { x: 15, y: 1 }, { x: 3, y: 19 },
+    { x: 17, y: 1 }, { x: 1, y: 19 }, { x: 17, y: 3 }, { x: 2, y: 19 },
+  ],
   exit: { x: 1, y: 1 },
 };
 
@@ -66,7 +56,8 @@ export function canTurn(current: Direction, requested: Direction): boolean {
 export function newGame(growth: boolean, maze: Maze = BURROW): SnakeState {
   return {
     maze, growth, body: maze.start.map((cell) => ({ ...cell })), direction: maze.direction,
-    eggs: maze.eggs.map((cell) => ({ ...cell })), phase: "ready", collision: null, steps: 0,
+    eggs: maze.eggs.map((cell) => ({ ...cell })), growthPending: 0,
+    phase: "ready", collision: null, steps: 0,
   };
 }
 
@@ -83,16 +74,18 @@ export function advance(state: SnakeState, requested: Direction = state.directio
   if (state.maze.rows[head.y]?.[head.x] !== ".") {
     return { ...state, direction, phase: "lost", collision: "wall" };
   }
-  const eating = state.eggs.some((egg) => sameCell(head, egg));
-  const grows = state.growth && eating;
+  const eating = state.eggs[0] !== undefined && sameCell(head, state.eggs[0]);
+  const growthPending = state.growth ? state.growthPending + (eating ? SEGMENTS_PER_EGG : 0) : 0;
+  const grows = growthPending > 0;
   const occupied = grows ? state.body : state.body.slice(0, -1);
   if (occupied.some((cell) => sameCell(head, cell))) {
     return { ...state, direction, phase: "lost", collision: "body" };
   }
   const body = [head, ...occupied];
-  const eggs = eating ? state.eggs.filter((egg) => !sameCell(head, egg)) : state.eggs;
+  const eggs = eating ? state.eggs.slice(1) : state.eggs;
   return {
     ...state, body, direction, eggs, steps: state.steps + 1,
+    growthPending: grows ? growthPending - 1 : 0,
     phase: eggs.length === 0 && sameCell(head, state.maze.exit) ? "won" : "playing",
   };
 }

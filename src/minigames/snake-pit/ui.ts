@@ -1,5 +1,5 @@
 import { h, s } from "../../lib/dom";
-import { advance, canTurn, MOVE_MS, newGame, startGame, type Direction, type SnakeState } from "./game";
+import { advance, canTurn, MOVE_MS, newGame, SEGMENTS_PER_EGG, startGame, type Direction, type SnakeState } from "./game";
 
 const ARROWS: Record<Direction, string> = { up: "↑", right: "→", down: "↓", left: "←" };
 const ROTATION: Record<Direction, number> = { up: -90, right: 0, down: 90, left: 180 };
@@ -23,8 +23,9 @@ export function mountSnakePit(el: HTMLElement): () => void {
   let paused = false;
   let disposed = false;
   let frameId: number | null = null;
+  const goal = state.maze.eggs.length;
 
-  const eggs = h("output", { "data-eggs": "" }, "0 / 3");
+  const eggs = h("output", { "data-eggs": "" }, `0 / ${goal}`);
   const length = h("output", { "data-length": "" }, "3");
   const time = h("output", { "aria-label": "Time moving" }, "0:00");
   const stat = (label: string, value: HTMLElement) => h("div", { class: "snake-pit-stat" }, h("span", {}, label), value);
@@ -34,7 +35,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
   const restart = h("button", { type: "button", class: "snake-pit-button", "data-restart": "" }, "Restart");
   const status = h("p", { class: "snake-pit-status", role: "status", "data-status": "" });
   const controls = h("p", { class: "snake-pit-help", id: `snake-pit-controls-${id}` }, "Arrows / WASD or tap the arrows. Space pauses. No reversing.");
-  const svg = s("svg", { viewBox: `0 0 ${state.maze.rows[0].length} ${state.maze.rows.length}`, role: "img", "aria-label": "Burrow maze: three eggs and the exit at the top left" });
+  const svg = s("svg", { viewBox: `0 0 ${state.maze.rows[0].length} ${state.maze.rows.length}`, role: "img", "aria-label": "Rocky burrow: one egg at a time and the exit at the top left" });
   const board = h("div", { class: "snake-pit-board", tabindex: 0, role: "group", "data-board": "", "aria-label": "Snake Pit play area", "aria-describedby": controls.id }, svg);
   const floor = s("g", { class: "snake-pit-floor" });
   state.maze.rows.forEach((row, y) => [...row].forEach((cell, x) => {
@@ -53,7 +54,8 @@ export function mountSnakePit(el: HTMLElement): () => void {
     s("circle", { cx: 0.15, cy: 0.17, r: 0.075, class: "snake-pit-eye" }),
   );
   const snake = s("g", { class: "snake-pit-snake" }, bodyPath, tail, headShape);
-  svg.append(floor, exit, eggLayer, snake);
+  // Keep the next nest visible even when a long tail is still passing over it.
+  svg.append(floor, exit, snake, eggLayer);
 
   const buttons = new Map<Direction, HTMLButtonElement>();
   const dpad = h("div", { class: "snake-pit-dpad", role: "group", "aria-label": "Direction controls" });
@@ -71,10 +73,10 @@ export function mountSnakePit(el: HTMLElement): () => void {
     h("div", { class: "snake-pit-hud" }, stat("Eggs", eggs), stat("Length", length), stat("Moving time", time)),
     h("div", { class: "snake-pit-settings" },
       h("label", { class: "snake-pit-growth" }, growth, mode),
-      h("span", { class: "snake-pit-setting-note" }, "+1 segment per egg · set before starting")),
+      h("span", { class: "snake-pit-setting-note" }, `+${SEGMENTS_PER_EGG} segments per egg · set before starting`)),
     board,
     h("div", { class: "snake-pit-legend", "aria-hidden": "true" },
-      h("span", {}, "● Snake"), h("span", {}, "⬭ Egg"), h("span", {}, "⇩ Exit · opens at 3 eggs")),
+      h("span", {}, "● Snake"), h("span", {}, "⬭ Next egg"), h("span", {}, `⇩ Exit · opens at ${goal} eggs`)),
     status,
     h("div", { class: "snake-pit-play-controls" }, dpad, h("div", { class: "snake-pit-actions" }, action, restart)),
     controls, reflection,
@@ -112,8 +114,8 @@ export function mountSnakePit(el: HTMLElement): () => void {
     const ended = state.phase === "won" || state.phase === "lost";
     root.setAttribute("data-phase", paused ? "paused" : state.phase);
     board.setAttribute("data-steps", String(state.steps));
-    eggs.textContent = `${state.maze.eggs.length - state.eggs.length} / 3`;
-    length.textContent = String(state.body.length);
+    eggs.textContent = `${goal - state.eggs.length} / ${goal}`;
+    length.textContent = state.growthPending ? `${state.body.length} +${state.growthPending}` : String(state.body.length);
     mode.textContent = `Growth ${growth.checked ? "ON" : "OFF"}`;
     growth.disabled = state.phase === "playing";
     restart.disabled = state.phase === "ready";
@@ -121,17 +123,24 @@ export function mountSnakePit(el: HTMLElement): () => void {
     reflection.hidden = !ended;
     const open = state.eggs.length === 0;
     exit.setAttribute("data-open", String(open));
-    svg.setAttribute("aria-label", `Burrow maze. ${3 - state.eggs.length} of 3 eggs collected. Exit at top left ${open ? "open" : "locked"}. Snake length ${state.body.length}.`);
-    eggLayer.replaceChildren(...state.eggs.map((egg) => s("ellipse", { cx: egg.x + 0.5, cy: egg.y + 0.5, rx: 0.27, ry: 0.36 })));
+    svg.setAttribute("aria-label", `Rocky burrow. ${goal - state.eggs.length} of ${goal} eggs collected. Exit at top left ${open ? "open" : "locked"}. Snake length ${state.body.length}.`);
+    const egg = state.eggs[0];
+    eggLayer.replaceChildren(...(egg ? [
+      s("circle", { cx: egg.x + 0.5, cy: egg.y + 0.5, r: 0.6, class: "snake-pit-egg-ring" }),
+      s("ellipse", { cx: egg.x + 0.5, cy: egg.y + 0.5, rx: 0.31, ry: 0.42 }),
+    ] : []));
     for (const [direction, button] of buttons) {
       button.disabled = state.phase !== "playing" || paused;
       button.setAttribute("data-queued", String(queued === direction));
     }
-    let message = "Plan your route. Collect 3 eggs, then return to the exit at the top left.";
+    let message = `Collect ${goal} eggs, one at a time. Then return to the exit at the top left.`;
     if (paused) message = "Paused. Resume when you’re ready.";
-    else if (state.phase === "won") message = `Escaped in ${clock(state.steps * MOVE_MS)} with growth ${state.growth ? "ON" : "OFF"}. All three eggs are safe.`;
+    else if (state.phase === "won") message = `Escaped in ${clock(state.steps * MOVE_MS)} with growth ${state.growth ? "ON" : "OFF"}. All ${goal} eggs are safe.`;
     else if (state.phase === "lost") message = state.collision === "wall" ? "Hit a wall. Try a different turn, or restart your route." : "Caught in your own body. Try a wider loop.";
-    else if (state.phase === "playing") message = open ? "All 3 eggs! Reach the exit at the top left." : `${state.eggs.length} ${state.eggs.length === 1 ? "egg" : "eggs"} to go. Leave room for your tail.`;
+    else if (state.phase === "playing") message = open
+      ? `All ${goal} eggs! Reach the exit at the top left.`
+      : state.growthPending ? "Growing! Leave a wide route around your own body."
+        : `${state.eggs.length} ${state.eggs.length === 1 ? "egg" : "eggs"} to go. Leave room for your tail.`;
     if (status.textContent !== message) status.textContent = message;
     draw();
   }

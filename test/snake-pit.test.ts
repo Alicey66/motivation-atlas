@@ -12,12 +12,14 @@ const pickupMaze: Maze = {
   exit: { x: 6, y: 2 },
 };
 
+// An 80-cell circuit, with detours into the arena to make room for a 75-cell body.
+const LAP: readonly (readonly [Direction, number])[] = [
+  ["right", 6], ["down", 2], ["right", 4], ["up", 2], ["right", 6],
+  ["down", 7], ["left", 2], ["down", 4], ["right", 2], ["down", 7],
+  ["left", 5], ["up", 2], ["left", 4], ["down", 2], ["left", 7], ["up", 18],
+];
 const ESCAPE: readonly (readonly [Direction, number])[] = [
-  ["right", 10], ["down", 2], ["left", 11], ["down", 2],
-  ["right", 12], ["down", 2], ["left", 11], ["down", 2],
-  ["right", 10], ["down", 2], ["left", 11], ["down", 2],
-  ["right", 12], ["down", 2], ["left", 11], ["down", 2],
-  ["right", 10], ["down", 2], ["left", 14], ["up", 18],
+  ["right", 2], ...LAP.slice(1), ...Array.from({ length: 5 }, () => LAP).flat(),
 ];
 
 function follow(state: SnakeState, route: readonly (readonly [Direction, number])[]): SnakeState {
@@ -45,13 +47,39 @@ describe("Snake Pit: the growth mechanic", () => {
     expect(after.body).toHaveLength(before.body.length);
   });
 
-  it.each([true, false])("grows only on egg pickups, once per egg (growth %s)", (growth) => {
+  it.each([true, false])("one egg adds six segments over the following moves only with growth ON (%s)", (growth) => {
+    const maze: Maze = {
+      rows: ["#################", "#...............#", "#...............#", "#################"],
+      start: pickupMaze.start, direction: "right", eggs: [{ x: 4, y: 1 }], exit: { x: 1, y: 2 },
+    };
+    const first = advance(startGame(newGame(growth, maze)));
+    expect(first.growthPending).toBe(growth ? 5 : 0);
+    const grown = follow(first, [["right", 5]]);
+    expect(grown.phase).toBe("playing");
+    expect(grown.body).toHaveLength(growth ? 9 : 3);
+    expect(grown.growthPending).toBe(0);
+    expect(advance(grown).body).toHaveLength(grown.body.length);
+  });
+
+  it.each([true, false])("queues every egg's growth even when pickups are consecutive (growth %s)", (growth) => {
     const before = startGame(newGame(growth, pickupMaze));
     const after = follow(before, [["right", 3], ["down", 1]]);
     expect(after.eggs).toHaveLength(0);
-    expect(after.body).toHaveLength(growth ? 6 : 3);
+    expect(after.body).toHaveLength(growth ? 7 : 3);
+    expect(after.growthPending).toBe(growth ? 14 : 0);
     expect(after.phase).toBe("won");
     expect(advance(after)).toBe(after);
+  });
+
+  it("collects only the active egg and counts repeated visits to a nest separately", () => {
+    const maze = { ...pickupMaze, eggs: [{ x: 5, y: 1 }, { x: 4, y: 1 }, { x: 5, y: 1 }] };
+    const first = advance(startGame(newGame(false, maze)));
+    expect(first.eggs).toHaveLength(3);
+    const second = advance(first);
+    expect(second.eggs).toEqual(maze.eggs.slice(1));
+    const all = follow(second, [["down", 1], ["left", 1], ["up", 1], ["right", 1]]);
+    expect(all.eggs).toHaveLength(0);
+    expect(all.phase).toBe("playing");
   });
 });
 
@@ -95,6 +123,14 @@ describe("Snake Pit: movement and goals", () => {
     expect(advance(state, "left").collision).toBe("body");
   });
 
+  it("keeps the tail solid while queued growth is still being added", () => {
+    const state: SnakeState = {
+      ...startGame(newGame(true, pickupMaze)), direction: "down", growthPending: 1,
+      body: [{ x: 3, y: 2 }, { x: 3, y: 1 }, { x: 2, y: 1 }, { x: 2, y: 2 }],
+    };
+    expect(advance(state, "left").collision).toBe("body");
+  });
+
   it("does not let an early visit to the exit win", () => {
     const maze = { ...pickupMaze, exit: { x: 3, y: 2 } };
     const state = advance(startGame(newGame(false, maze)), "down");
@@ -105,25 +141,37 @@ describe("Snake Pit: movement and goals", () => {
 });
 
 describe("Snake Pit: the actual burrow", () => {
-  it.each([true, false])("has a complete escape route lasting about a minute (growth %s)", (growth) => {
+  it.each([true, false])("has a complete escape route in both modes (growth %s)", (growth) => {
     const state = follow(startGame(newGame(growth)), ESCAPE);
     expect(state.phase).toBe("won");
     expect(state.eggs).toHaveLength(0);
-    expect(state.body).toHaveLength(growth ? 6 : 3);
+    expect(state.body).toHaveLength(growth ? 75 : 3);
+    expect(state.growthPending).toBe(0);
     expect(state.steps * MOVE_MS).toBeGreaterThanOrEqual(60_000);
     expect(state.steps * MOVE_MS).toBeLessThanOrEqual(120_000);
   });
 
-  it("makes a tight turnaround possible OFF and a body collision ON after two eggs", () => {
+  it("blocks a backtrack across the recent trail ON while the same route stays clear OFF", () => {
     const turn: readonly (readonly [Direction, number])[] = [
-      ["down", 1], ["left", 1], ["up", 1], ["right", 1],
+      ["down", 1], ["left", 1], ["up", 1],
     ];
-    const on = follow(startGame(newGame(true)), ESCAPE.slice(0, 11));
-    const off = follow(startGame(newGame(false)), ESCAPE.slice(0, 11));
-    expect(on.eggs).toHaveLength(1);
-    expect(off.eggs).toHaveLength(1);
+    const on = follow(startGame(newGame(true)), [["right", 12]]);
+    const off = follow(startGame(newGame(false)), [["right", 12]]);
+    expect(on.eggs).toHaveLength(11);
+    expect(off.eggs).toHaveLength(11);
     expect(follow(on, turn).collision).toBe("body");
     expect(follow(off, turn).phase).toBe("playing");
+  });
+
+  it("spaces the fixed sequence far enough apart that neither mode can rush a round in seconds", () => {
+    let previous = BURROW.start[0];
+    let minimumSteps = 0;
+    for (const cell of [...BURROW.eggs, BURROW.exit]) {
+      minimumSteps += Math.abs(cell.x - previous.x) + Math.abs(cell.y - previous.y);
+      previous = cell;
+    }
+    expect(minimumSteps * MOVE_MS).toBeGreaterThanOrEqual(60_000);
+    expect(BURROW.eggs).toHaveLength(12);
   });
 
   it("has connected passages, with no forced dead-end egg pockets", () => {
@@ -177,13 +225,15 @@ describe("Snake Pit: controls and lifecycle", () => {
   it("previews the maze without starting a clock, then locks the mechanic during play", () => {
     const { q } = setup();
     expect(q("[data-phase]").getAttribute("data-phase")).toBe("ready");
-    expect(q("[data-eggs]").textContent).toBe("0 / 3");
+    expect(q("[data-eggs]").textContent).toBe("0 / 12");
+    expect(q(".snake-pit-eggs").querySelectorAll("ellipse")).toHaveLength(1);
     expect(vi.getTimerCount()).toBe(0);
     q<HTMLButtonElement>("[data-action]").click();
     expect(q("[data-phase]").getAttribute("data-phase")).toBe("playing");
     expect(q<HTMLInputElement>("[data-mechanic='egg-growth']").disabled).toBe(true);
     expect(document.activeElement).toBe(q("[data-board]"));
-    vi.advanceTimersByTime(MOVE_MS + 32);
+    // The first full cell should arrive within a quarter second.
+    vi.advanceTimersByTime(256);
     expect(q("[data-board]").getAttribute("data-steps")).toBe("1");
   });
 
@@ -246,7 +296,7 @@ describe("Snake Pit: controls and lifecycle", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("keeps the interpolated body inside the grid corridor when turning a corner", () => {
+  it("follows a right-angle turn without drawing diagonal body segments", () => {
     const { q } = setup();
     q<HTMLButtonElement>("[data-action]").click();
     vi.advanceTimersByTime(MOVE_MS * 9 + 16);
@@ -292,9 +342,9 @@ describe("Snake Pit: controls and lifecycle", () => {
     total += ESCAPE[ESCAPE.length - 1][1] * MOVE_MS;
     vi.advanceTimersByTime(total + 16 - elapsed);
     expect(q("[data-phase]").getAttribute("data-phase")).toBe("won");
-    expect(q("[data-eggs]").textContent).toBe("3 / 3");
-    expect(q("[data-length]").textContent).toBe(growth ? "6" : "3");
-    expect(q("[data-status]").textContent).toContain("Escaped in 1:02");
+    expect(q("[data-eggs]").textContent).toBe("12 / 12");
+    expect(q("[data-length]").textContent).toBe(growth ? "75" : "3");
+    expect(q("[data-status]").textContent).toContain("Escaped in 1:54");
     expect(q("[data-reflect]").hidden).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
   });

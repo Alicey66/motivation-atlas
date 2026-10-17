@@ -13,6 +13,7 @@
 .snake-pit-head { stroke: var(--surface); stroke-width: 0.07; }
 .snake-pit-eye { fill: var(--surface); }
 .snake-pit-eggs { fill: var(--aes); stroke: var(--surface); stroke-width: 0.06; }
+.snake-pit-egg-ring { fill: none; stroke: var(--aes); stroke-width: 0.07; }
 .snake-pit-exit rect { fill: var(--surface); stroke: var(--mech); stroke-width: 0.1; stroke-dasharray: 0.15 0.1; }
 .snake-pit-exit path { stroke: var(--mech); stroke-width: 0.12; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .snake-pit-exit[data-open="true"] rect { fill: var(--mech-soft); stroke-dasharray: none; stroke-width: 0.16; }
