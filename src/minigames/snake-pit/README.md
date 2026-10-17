@@ -22,4 +22,4 @@ Course note, Challenge and mastery:
 
 > Clear goals, the possibility of failure, and immediate feedback (Lazzaro 2004b, sec. 2b).
 
-Classic Snake inspired eating, length growth, and body avoidance. Codex helped with code and tests. I kept its suggestion to use a few rock clusters instead of a full maze. The template and DOM helpers are from this repository. No outside code, art, or audio was borrowed.
+Classic Snake inspired eating, length growth, and body avoidance. I designed the width-growth mechanic: eggs make the snake wider and close narrow shortcuts. Codex helped with implementation and tests. I kept its suggestion to use a few rock clusters instead of a full maze. The template and DOM helpers are from this repository. No outside code, art, or audio was borrowed.
