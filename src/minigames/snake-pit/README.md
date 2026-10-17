@@ -4,39 +4,22 @@ Motivator: Challenge and mastery. Author: jianyangg.
 
 ## Mechanic
 
-Collect six eggs, then reach the exit. Choose either of up to two visible
-eggs. New eggs wait until your tail clears their nest. **Start escape** begins;
-**Hint: watch a winning route · 3×** shows one way out.
-Steer with arrows, WASD, or mouse/touch direction buttons. Only the head
-collects eggs. You keep moving and cannot reverse. Rocks, boundaries, and
-your body end the round. **Pause** or Space pauses; **Restart** resets.
+Collect six eggs and reach the exit. Up to two are visible; new eggs wait for the tail to clear their nest. Only the head collects eggs. Use arrows, WASD, or mouse/touch buttons. No reversing; walls and body contact end the round. **Space/Pause** pauses; **Restart** resets. A **3× hint** demonstrates an escape.
 
-Each egg adds 18 length segments in both modes. Set **Width growth** before
-starting: ON widens from 0.6 to 2.4 cells, with the new size following down
-the body. OFF stays slim. After two eggs, ON cannot fit the marked shortcuts;
-take a wider route. Egg clearings leave room to grow.
-Speed, obstacles, egg reveal order, and objectives stay identical.
+Each egg queues 18 length segments in both modes. **Width growth ON** adds 0.3 cells per egg (0.6–2.4), closing shortcuts after two eggs; **OFF** stays at 0.6. Other rules stay identical.
 
 ## Dynamic
 
-**Playtest pending.** Another person’s routes, collisions, and retries with
-width growth ON, then OFF, remain unrecorded. I predict that progress toward
-escape costs access to shortcuts and changes route choices. The
-one-to-two-minute target still needs a human playtest.
+With ON, the player collected three eggs but did not escape. Their body and tail ran alongside each other, leaving too little room to reach the next egg. Closed shortcuts forced wider routes. They made decisions more carefully and planned turns ahead. With OFF, they collected all six eggs easily and escaped. They mainly used WASD and found the hint helpful. Rounds took about 1.5 minutes.
 
 ## Aesthetic
 
-**Playtest pending.** No comments have been collected for either setting.
-Claims about tension, frustration, or satisfaction must come from
-what that person says after playing.
+ON felt fun and easy to play, with enough challenge to make improvement feel achievable. They wanted to try again. OFF felt simpler, less challenging, and less fun.
 
 ## Sources
 
-From the course note’s Challenge and mastery section:
+Course note, Challenge and mastery:
 
 > Clear goals, the possibility of failure, and immediate feedback (Lazzaro 2004b, sec. 2b).
 
-Classic Snake inspired eating, length growth, and avoiding the body. Codex
-helped with code and tests. I changed its growth toggle to control width
-only; length grows equally. The template and DOM helpers come from this
-repository. No outside code, art, or audio was borrowed.
+Classic Snake inspired eating, length growth, and body avoidance. Codex helped with code and tests. I changed its growth toggle to control width only. The template and DOM helpers are from this repository. No outside code, art, or audio was borrowed.

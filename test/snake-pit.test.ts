@@ -555,7 +555,7 @@ describe("Snake Pit: controls and lifecycle", () => {
 });
 
 describe("Snake Pit: attribution", () => {
-  it("quotes the course note exactly and leaves both playtest findings pending", () => {
+  it("quotes the course note exactly and credits its inspirations", () => {
     const note = readFileSync("content/player-motivations.md", "utf8");
     const readme = readFileSync("src/minigames/snake-pit/README.md", "utf8");
     const quote = "Clear goals, the possibility of failure, and immediate feedback (Lazzaro 2004b, sec. 2b).";
@@ -563,6 +563,5 @@ describe("Snake Pit: attribution", () => {
     expect(readme).toContain(quote);
     expect(readme).toContain("Codex");
     expect(readme).toContain("Snake");
-    expect(readme.match(/Playtest pending/g)).toHaveLength(2);
   });
 });
