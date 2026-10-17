@@ -58,7 +58,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
       h("span", { class: "snake-pit-setting-note" }, "ON widens with each egg. OFF stays slim.")),
     board,
     h("div", { class: "snake-pit-legend", "aria-hidden": "true" },
-      h("span", {}, "⬭ Next egg"), h("span", {}, "▱ Striped gap = too narrow"), h("span", {}, `⇩ Exit at ${goal} eggs`)),
+      h("span", {}, "⬭ Choose either egg"), h("span", {}, "▱ Striped gap = too narrow"), h("span", {}, `⇩ Exit at ${goal} eggs`)),
     status,
     h("div", { class: "snake-pit-play-controls" }, dpad, h("div", { class: "snake-pit-actions" }, action, restart)),
     controls, reflection,
@@ -93,7 +93,7 @@ export function mountSnakePit(el: HTMLElement): () => void {
       button.disabled = state.phase !== "playing" || paused;
       button.setAttribute("data-queued", String(queued === direction));
     }
-    let message = `Collect ${goal} eggs and return to the exit. Each egg adds ${SEGMENTS_PER_EGG} length in both modes.`;
+    let message = `Collect ${goal} eggs and return to the exit. Choose either visible egg; each adds ${SEGMENTS_PER_EGG} length in both modes.`;
     if (paused) message = "Paused. Resume when you’re ready.";
     else if (state.phase === "won") message = `Escaped in ${clock(state.steps * MOVE_MS)} with width growth ${state.widthGrowth ? "ON" : "OFF"}. All ${goal} eggs are safe.`;
     else if (state.phase === "lost") message = state.collision === "clearance"

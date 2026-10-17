@@ -18,6 +18,9 @@ export const BURROW: Maze = {
   }).join("")),
   start: [{ x: 4, y: 4 }, { x: 3, y: 4 }, { x: 2, y: 4 }],
   direction: "right",
-  eggs: [{ x: 14, y: 24 }, { x: 24, y: 8 }, { x: 4, y: 22 }, { x: 24, y: 24 }],
+  eggs: [
+    { x: 14, y: 24 }, { x: 24, y: 8 }, { x: 4, y: 22 },
+    { x: 24, y: 24 }, { x: 10, y: 3 }, { x: 6, y: 3 },
+  ],
   exit: { x: 4, y: 4 },
 };

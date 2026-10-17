@@ -33,7 +33,12 @@ export const SEGMENTS_PER_EGG = 18;
 const BASE_WIDTH = 0.6;
 
 export function widthFor(growth: boolean, eggsEaten: number): number {
-  return growth ? Math.min(1.8, (6 + eggsEaten * 3) / 10) : BASE_WIDTH;
+  return growth ? Math.min(2.4, (6 + eggsEaten * 3) / 10) : BASE_WIDTH;
+}
+
+/** Either visible egg can be collected; the rest remain in a fixed reveal order. */
+export function activeEggs(state: SnakeState): readonly Cell[] {
+  return state.eggs.slice(0, 2);
 }
 const VECTORS: Record<Direction, Cell> = {
   up: { x: 0, y: -1 }, right: { x: 1, y: 0 },
@@ -65,7 +70,8 @@ export function advance(state: SnakeState, requested: Direction = state.directio
   const direction = canTurn(state.direction, requested) ? requested : state.direction;
   const delta = VECTORS[direction];
   const head = { x: state.body[0].x + delta.x, y: state.body[0].y + delta.y };
-  const eating = state.eggs[0] !== undefined && sameCell(head, state.eggs[0]);
+  const eatenIndex = activeEggs(state).findIndex((egg) => sameCell(head, egg));
+  const eating = eatenIndex !== -1;
   const width = widthFor(state.widthGrowth, state.maze.eggs.length - state.eggs.length + Number(eating));
   if (hitsWall(state.maze.rows, state.body[0], head, width)) {
     const collision = state.maze.rows[head.y]?.[head.x] === "." ? "clearance" : "wall";
@@ -79,7 +85,7 @@ export function advance(state: SnakeState, requested: Direction = state.directio
     return { ...state, direction, phase: "lost", collision: "body" };
   }
   const body = [head, ...occupied];
-  const eggs = eating ? state.eggs.slice(1) : state.eggs;
+  const eggs = eating ? state.eggs.filter((_, index) => index !== eatenIndex) : state.eggs;
   return {
     ...state, body, widths: [width, ...occupiedWidths], direction, eggs, steps: state.steps + 1,
     growthPending: grows ? growthPending - 1 : 0,

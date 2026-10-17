@@ -1,7 +1,7 @@
 import { h, s } from "../../lib/dom";
 import { SHORTCUTS } from "./burrow";
 import { hitsWall } from "./geometry";
-import type { Direction, SnakeState } from "./game";
+import { activeEggs, type Direction, type SnakeState } from "./game";
 
 const ROTATION: Record<Direction, number> = { up: -90, right: 0, down: 90, left: 180 };
 
@@ -54,11 +54,10 @@ export function createBoard(initial: SnakeState, controlsId: string) {
       node.setAttribute("data-closed", String(closed));
       node.style.fill = closed ? `url(#${hatchId})` : "var(--accent-soft)";
     });
-    const egg = state.eggs[0];
-    eggLayer.replaceChildren(...(egg ? [
+    eggLayer.replaceChildren(...activeEggs(state).flatMap((egg) => [
       s("circle", { cx: egg.x + 0.5, cy: egg.y + 0.5, r: 0.85, class: "snake-pit-egg-ring" }),
       s("ellipse", { cx: egg.x + 0.5, cy: egg.y + 0.5, rx: 0.39, ry: 0.52 }),
-    ] : []));
+    ]));
   }
 
   function draw(state: SnakeState, next: SnakeState = state, progress = 0): void {

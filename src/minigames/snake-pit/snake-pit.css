@@ -1,11 +1,11 @@
-.snake-pit { display: grid; gap: 10px; justify-items: center; max-width: 440px; margin-inline: auto; min-width: 0; }
+.snake-pit { display: grid; gap: 10px; justify-items: center; width: 100%; max-width: 640px; margin-inline: auto; min-width: 0; }
 .snake-pit *, .snake-pit *::before, .snake-pit *::after { box-sizing: border-box; }
 .snake-pit-hud { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding-block: 10px; }
 .snake-pit-stat { display: grid; text-align: center; gap: 1px; }
 .snake-pit-stat + .snake-pit-stat { border-left: 1px solid var(--line); }
 .snake-pit-stat span { color: var(--muted); font: 500 0.7rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase; }
 .snake-pit-stat output { font: 700 1.4rem var(--display); font-variant-numeric: tabular-nums; }
-.snake-pit-board { width: min(100%, 380px); line-height: 0; background: var(--ink); border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
+.snake-pit-board { width: 100%; line-height: 0; background: var(--ink); border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
 .snake-pit-board svg { display: block; width: 100%; height: auto; }
 .snake-pit-floor { fill: var(--surface); }
 .snake-pit-body { fill: none; stroke: var(--dyn); stroke-linejoin: round; stroke-linecap: round; }
