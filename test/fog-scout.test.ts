@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fogScout } from "../src/minigames/fog-scout";
-import { MAPS, SIZE, move, newGame, tileAt, type Direction, type ScoutState } from "../src/minigames/fog-scout/game";
+import { MAPS, SIZE, adjacentMonster, attack, move, newGame, tileAt, type Direction, type ScoutState } from "../src/minigames/fog-scout/game";
+import { renderRoute } from "../src/app";
 
 const cleanups: Array<() => void> = [];
 afterEach(() => {
@@ -29,7 +30,7 @@ function route(map: number, from: number, to: number): Direction[] {
 }
 
 function walk(state: ScoutState, path: Direction[]): ScoutState {
-  return path.reduce(move, state);
+  return path.reduce((current, direction) => move(adjacentMonster(current) === undefined ? current : attack(current), direction), state);
 }
 
 function winningRoute(map: number): Direction[] {
@@ -77,6 +78,10 @@ describe("Fog Scout's central visibility rule", () => {
     let hidden = newGame(true, map);
     let visible = newGame(false, map);
     for (const direction of winningRoute(map)) {
+      if (adjacentMonster(hidden) !== undefined) {
+        hidden = attack(hidden);
+        visible = attack(visible);
+      }
       hidden = move(hidden, direction);
       visible = move(visible, direction);
       expect({ ...hidden, fog: false }).toEqual(visible);
@@ -95,6 +100,8 @@ describe("Fog Scout movement and objectives", () => {
     expect(cells.filter((tile) => tile === "R")).toHaveLength(3);
     expect(cells.filter((tile) => tile === "S")).toHaveLength(1);
     expect(cells.filter((tile) => tile === "E")).toHaveLength(1);
+    expect(new Set(MAPS[map].monsters).size).toBe(3);
+    MAPS[map].monsters.forEach((position) => expect(cells[position]).toBe("."));
     cells.forEach((tile, i) => { if (tile !== "#") expect(() => route(map, 0, i)).not.toThrow(); });
   });
 
@@ -129,15 +136,44 @@ describe("Fog Scout movement and objectives", () => {
 });
 
 describe("Fog Scout controls and evidence", () => {
+  it.each([true, false])("marks visited squares without revealing unexplored paths (fog %s)", (fog) => {
+    const { q, el } = setup();
+    if (!fog) q<HTMLInputElement>("[data-mechanic]").click();
+    q<HTMLButtonElement>('[data-direction="right"]').click();
+    q<HTMLButtonElement>('[data-direction="down"]').click(); // Wall, never visited.
+    q<HTMLButtonElement>('[data-direction="left"]').click();
+    expect(q('[data-cell="1"]').getAttribute("aria-label")).toContain("visited");
+    expect(q('[data-cell="1"] .fs-sprite-footprints')).not.toBeNull();
+    for (const cell of [2, 6, 8]) expect(el.querySelector(`[data-cell="${cell}"] .fs-sprite-footprints`)).toBeNull();
+    q<HTMLButtonElement>("[data-replay]").click();
+    expect(el.querySelectorAll(".fs-board .fs-sprite-footprints")).toHaveLength(0);
+  });
+
+  it("records only traveled squares in the end route, without exposing hidden terrain", () => {
+    const { q, el } = setup();
+    q(".fs-board").dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    for (const direction of ["right", "right", "right", "down", "down", "down"]) {
+      q<HTMLButtonElement>(`[data-direction="${direction}"]`).click();
+    }
+    expect(q("[data-route-review] polyline").getAttribute("points")).toBe("10,10 30,10 50,10");
+    expect(q("[data-route-review] svg").getAttribute("aria-label")).toContain("2 moves, 0 revisits");
+    expect(el.querySelectorAll("[data-route-review] rect")[48].getAttribute("fill")).toBe("#101921");
+    q<HTMLButtonElement>("[data-replay]").click();
+    expect(el.querySelector("[data-route-review]")).toBeNull();
+  });
+
   it("keeps undiscovered items out of visible text, labels and classes", () => {
     const { q, el } = setup();
     expect(q('[data-cell="6"]').getAttribute("aria-label")).toContain("unknown");
-    expect(q('[data-cell="6"]').textContent).toBe("?");
+    expect(q('[data-cell="6"]').querySelector("svg")).toBeNull();
+    expect(q('[data-cell="9"]').getAttribute("aria-label")).toContain("unknown");
+    expect(el.querySelectorAll(".fs-monster")).toHaveLength(0);
     expect(el.querySelectorAll(".fs-relic, .fs-exit")).toHaveLength(0);
     q<HTMLInputElement>("[data-mechanic]").click();
     expect(el.querySelectorAll(".fs-unknown")).toHaveLength(0);
     expect(el.querySelectorAll(".fs-relic")).toHaveLength(3);
     expect(el.querySelectorAll(".fs-exit")).toHaveLength(1);
+    expect(el.querySelectorAll(".fs-monster")).toHaveLength(3);
   });
 
   it("restarts when fog changes and preserves keyboard focus", () => {
@@ -147,10 +183,10 @@ describe("Fog Scout controls and evidence", () => {
     checkbox.focus();
     checkbox.click();
     expect(document.activeElement).toBe(checkbox);
-    expect(q("[data-mode]").textContent).toBe("FOG OFF");
+    expect(q("[data-mode]").textContent).toBe("OFF");
     expect(q("[data-steps]").textContent).toBe("0");
     checkbox.click();
-    expect(q("[data-mode]").textContent).toBe("FOG ON");
+    expect(q("[data-mode]").textContent).toBe("ON");
     expect(q("[data-explored]").textContent).toBe("6%");
   });
 
@@ -172,14 +208,24 @@ describe("Fog Scout controls and evidence", () => {
     const path = winningRoute(0);
     q<HTMLButtonElement>(`[data-direction="${path[0]}"]`).click();
     vi.advanceTimersByTime(75000);
-    path.slice(1).forEach((direction) => q<HTMLButtonElement>(`[data-direction="${direction}"]`).click());
+    path.slice(1).forEach((direction) => {
+      const sword = q<HTMLButtonElement>("[data-attack]");
+      if (sword.getAttribute("aria-disabled") === "false") sword.click();
+      q<HTMLButtonElement>(`[data-direction="${direction}"]`).click();
+    });
     expect(q("[data-result]").hidden).toBe(false);
     expect(q("[data-result]").textContent).toContain("What did you feel");
     expect(q("[data-history]").textContent).toContain("75s");
     expect(q("[data-relics]").textContent).toBe("3 / 3");
+    expect(q(".fog-scout").dataset.outcome).toBe("won");
+    expect(q(".fs-result-banner").textContent).toContain("DUNGEON CLEARED");
+    expect(q("[data-route-review]").textContent).toContain("Repeated squares:");
+    expect(q("[data-route-review] polyline").getAttribute("points")!.split(" ")).toHaveLength(path.length + 1);
+    expect(el.querySelectorAll(".fs-confetti")).toHaveLength(32);
     q<HTMLButtonElement>('[data-direction="left"]').click();
     expect(el.querySelectorAll("[data-history] li")).toHaveLength(1);
     q<HTMLButtonElement>("[data-replay]").click();
+    expect(el.querySelectorAll(".fs-confetti")).toHaveLength(0);
     expect(q("[data-result]").hidden).toBe(true);
     expect(q("[data-relics]").textContent).toBe("0 / 3");
     expect(q("[data-steps]").textContent).toBe("0");
@@ -203,5 +249,155 @@ describe("Fog Scout controls and evidence", () => {
     expect(steps.textContent).toBe("1");
     expect(a.el.childNodes).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("Dungeon guardians", () => {
+  it("sleeps until discovered, wakes without attacking, then follows after retreat", () => {
+    const start = newGame();
+    const first = move(start, "right");
+    expect(first.monsters.every((monster) => !monster.awake)).toBe(true);
+    const discovered = move(first, "right");
+    expect(discovered.monsters[0]).toEqual({ id: 9, position: 9, awake: true });
+    expect(discovered.awakened).toEqual([9]);
+    expect(discovered.health).toBe(3);
+    const retreat = move(discovered, "left");
+    expect(retreat.monsters[0]).toEqual({ id: 9, position: 2, awake: true });
+    expect(retreat.health).toBe(3);
+    expect(retreat.awakened).toEqual([]);
+    expect(tileAt(retreat, 9)).toBe("floor");
+    expect(tileAt(retreat, 2)).toBe("monster");
+    expect(move(retreat, "left").monsters[0].position).toBe(1);
+    expect(discovered.monsters[0].position).toBe(9);
+    expect(start.monsters[0].awake).toBe(false);
+  });
+
+  it("retains monster identity after movement and lets the player strike first", () => {
+    const chased = move(walk(newGame(), ["right", "right"]), "left");
+    const cleared = attack(chased);
+    expect(cleared.defeated).toEqual([9]);
+    expect(cleared.health).toBe(3);
+    expect(cleared.monsters.some((monster) => monster.id === 9)).toBe(false);
+    expect(tileAt(cleared, 2)).toBe("floor");
+    expect(attack(cleared).defeated).toEqual([9]);
+  });
+
+  it("does not advance enemies on walls, edges, or an attack with no target", () => {
+    const discovered = walk(newGame(), ["right", "right"]);
+    expect(move(discovered, "right").monsters).toEqual(discovered.monsters);
+    expect(move(discovered, "up").monsters).toEqual(discovered.monsters);
+    const distant = { ...newGame(), monsters: [{ id: 9, position: 9, awake: true }] };
+    expect(attack(distant).monsters).toEqual(distant.monsters);
+  });
+
+  it("routes around walls and keeps monsters from overlapping each other or the player", () => {
+    let state: ScoutState = { ...newGame(false), monsters: [
+      { id: 9, position: 9, awake: true }, { id: 26, position: 16, awake: true },
+    ] };
+    state = move(state, "down");
+    expect(state.monsters.map((monster) => monster.position)).toEqual([2, 23]);
+    for (const direction of ["up", "down", "up", "down"] as const) {
+      state = move(state, direction);
+      const positions = state.monsters.map((monster) => monster.position);
+      expect(new Set(positions).size).toBe(positions.length);
+      expect(positions).not.toContain(state.position);
+      positions.forEach((position) => expect(MAPS[0].rows.join("")[position]).not.toBe("#"));
+    }
+  });
+
+  it("lets another adjacent slime bite after a hit, but caps all damage at one heart per turn", () => {
+    const surrounded: ScoutState = { ...newGame(false), position: 16,
+      monsters: [{ id: 9, position: 9, awake: true }, { id: 26, position: 17, awake: true }, { id: 36, position: 23, awake: true }] };
+    expect(attack(surrounded)).toMatchObject({ health: 2, defeated: [9], event: "hurt" });
+    expect(move(surrounded, "down")).toMatchObject({ health: 2, position: 16, event: "hurt" });
+    expect(attack({ ...surrounded, health: 1 })).toMatchObject({ health: 0, lost: true, event: "fallen" });
+  });
+
+  it("shows awake state and chasing in the UI, then removes both on restart", () => {
+    const { q, el } = setup();
+    q<HTMLButtonElement>('[data-direction="right"]').click();
+    q<HTMLButtonElement>('[data-direction="right"]').click();
+    expect(q('[data-cell="9"]').getAttribute("aria-label")).toContain("awake and pursuing");
+    expect(q("[data-status]").textContent).toContain("A slime wakes!");
+    q<HTMLButtonElement>('[data-direction="left"]').click();
+    expect(q('[data-cell="2"]').classList.contains("fs-awake")).toBe(true);
+    expect(q('[data-cell="9"]').classList.contains("fs-monster")).toBe(false);
+    q<HTMLButtonElement>("[data-replay]").click();
+    expect(el.querySelectorAll(".fs-awake, .fs-monster-state")).toHaveLength(0);
+  });
+
+  it("blocks movement and costs one heart on contact, but a safe adjacent attack clears the path", () => {
+    const near = walk(newGame(), ["right", "right"]);
+    expect(tileAt(near, 9)).toBe("monster");
+    expect(adjacentMonster(near)).toBe(9);
+    const hit = move(near, "down");
+    expect(hit).toMatchObject({ health: 2, position: 2, steps: 2, event: "hurt" });
+    const cleared = attack(hit);
+    expect(cleared).toMatchObject({ health: 2, defeated: [9], event: "defeated" });
+    expect(tileAt(cleared, 9)).toBe("floor");
+    expect(move(cleared, "down")).toMatchObject({ position: 9, steps: 3, health: 2 });
+    expect(attack(cleared).defeated).toEqual([9]);
+  });
+
+  it("never attacks a distant or diagonal monster, and does not wrap across map edges", () => {
+    expect(attack(newGame()).event).toBe("miss");
+    expect(adjacentMonster(move(newGame(), "right"))).toBeUndefined();
+    const rowEdge = { ...newGame(false), position: 20, defeated: [9, 36] };
+    expect(adjacentMonster(rowEdge)).toBeUndefined();
+  });
+
+  it("ends at zero hearts and freezes all actions until a fresh round", () => {
+    let state = walk(newGame(), ["right", "right"]);
+    for (let i = 0; i < 3; i++) state = move(state, "down");
+    expect(state).toMatchObject({ lost: true, won: false, health: 0, event: "fallen" });
+    expect(move(state, "left")).toBe(state);
+    expect(attack(state)).toBe(state);
+    expect(newGame().health).toBe(3);
+  });
+
+  it("keeps damage and attack results identical with fog on or off", () => {
+    let a = walk(newGame(true), ["right", "right"]);
+    let b = walk(newGame(false), ["right", "right"]);
+    a = move(a, "down"); b = move(b, "down");
+    expect({ ...a, fog: false }).toEqual(b);
+    expect({ ...attack(a), fog: false }).toEqual(attack(b));
+  });
+
+  it("supports Space combat on the map and shows a restartable loss with reflection", () => {
+    const { q } = setup();
+    const press = (key: string) => q(".fs-board").dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+    press("ArrowRight"); press("ArrowRight"); press(" ");
+    expect(q("[data-kills]").textContent).toBe("1 / 3");
+    expect(q("[data-health]").getAttribute("aria-label")).toBe("3 of 3 hearts");
+    q<HTMLButtonElement>("[data-replay]").click();
+    press("ArrowRight"); press("ArrowRight");
+    press("ArrowDown"); press("ArrowDown"); press("ArrowDown");
+    expect(q("[data-result]").hidden).toBe(false);
+    expect(q("[data-result]").textContent).toContain("What did you feel");
+    expect(q("[data-history]").textContent).toContain("Fallen");
+    expect(q(".fog-scout").dataset.outcome).toBe("lost");
+    expect(q(".fs-result-banner").textContent).toContain("EXPEDITION OVER");
+    expect(q(".fs-celebration").childElementCount).toBe(0);
+    expect(q("[data-attack]").getAttribute("aria-disabled")).toBe("true");
+    q<HTMLButtonElement>("[data-replay]").click();
+    expect(q("[data-health]").getAttribute("data-health")).toBe("3");
+    expect(q("[data-result]").hidden).toBe(true);
+  });
+});
+
+describe("Discovery page prioritizes play", () => {
+  it("shows the dungeon before optional instructions, course notes and examples", () => {
+    const el = document.createElement("div");
+    const unmount = renderRoute(el, "#/m/discovery");
+    cleanups.push(unmount);
+    const game = el.querySelector(".fog-scout")!;
+    const theory = el.querySelector<HTMLDetailsElement>(".motivator-reference")!;
+    const howTo = el.querySelector<HTMLDetailsElement>(".minigame-instructions")!;
+    expect(theory.open).toBe(false);
+    expect(howTo.open).toBe(false);
+    expect(game.compareDocumentPosition(theory) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(game.compareDocumentPosition(howTo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(theory.querySelectorAll(".band")).toHaveLength(3);
+    expect(theory.querySelector(".cite-link")).not.toBeNull();
   });
 });

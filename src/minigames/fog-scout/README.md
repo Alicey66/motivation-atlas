@@ -1,39 +1,38 @@
-# Fog Scout: the unseen ruins
+# Fog Scout: the unseen dungeon
 
 Motivator: Discovery. Author: DemonRain7.
 
 ## Mechanic
 
-Recover three relics (◆), then reach the exit (◎) in a seven-by-seven ruin.
-Focus the map and use arrow keys or WASD, or click/tap the direction buttons.
-Walls (▧) block movement. There is no countdown or move limit; aim for a
-one-to-two-minute expedition. **Exploration fog** hides unexplored squares;
-each move reveals your square and its four neighbors permanently. Turn fog
-off to see everything. Changing the toggle restarts the same map with identical
-movement and collection rules. **Replay these ruins** resets the round;
-**Other ruins** switches layouts. Round notes retain your last four completions.
+Collect three relics, then reach the exit. Use arrows/WASD or direction
+buttons. Slimes wake when approached and pursue after your next successful
+move or attack. Space or Attack defeats an adjacent slime; retreat to dodge.
+Contact or bites cost at most one heart per turn; losing three ends the round.
+Walls and empty attacks cost no turn. **Exploration fog** reveals nearby
+squares permanently; switch it off to see everything. Switching restarts with
+identical rules. **Restart** replays; **Other dungeon** changes layouts.
+Footprints mark visited squares; the ending offers a route review. Aim for
+one or two minutes.
 
 ## Dynamic
 
-The intended dynamic is scouting and backtracking with fog, compared with
-planning a direct collection route when the map is visible. Each discovery
-can change the next destination. Previously revealed squares stay visible,
-so exploration gradually becomes route planning. Replaying the same layout
-also introduces map familiarity, which must be considered when comparing
-the two conditions. Playtest observations are pending.
+Two reported Amber Court clears took 44 moves/14 backtracks with fog on and
+34/10 with fog off. The visible map supported advance planning, although
+replay familiarity also contributed. Feedback prioritized footprints to
+reduce uncertainty about previously visited corridors. These observations
+preceded that revision; a third run was unfinished.
 
 ## Aesthetic
 
-The intended aesthetic is curiosity about unexplored space. A visible map
-may instead support a sense of control. These are design expectations;
-the player's reported feelings in each condition are pending.
+Feedback described exploratory tension, satisfying turn-based pursuit, and
+breathing room while thinking. Repeated dead ends felt costly; footprints
+and route review address that concern. Earlier feedback requested moving
+monsters and clearer endings, leading to pursuit and victory confetti.
 
 ## Sources
 
-The course note's Discovery section quotes "the strategic unveiling of hidden
-information adds suspense and tension" (Salen and Zimmerman 2003, ch. 17,
-"Hiding and Revealing Systems"). This is a hypothesis to test against play.
-Codex assisted design and implementation. I kept its suggestion that
-fog change only visibility, leaving movement and rewards constant. Code uses
-the Atlas template and DOM helper; visuals use CSS and text without external
-assets.
+The course note quotes "the strategic unveiling of hidden information adds
+suspense and tension" (Salen and Zimmerman 2003, ch. 17, "Hiding and Revealing
+Systems"). Codex assisted design and implementation. I kept its suggestion
+that fog change visibility alone. Original SVG art and CSS use the Atlas
+template and DOM helper; no external art or sound is used.
