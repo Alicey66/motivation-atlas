@@ -5,30 +5,29 @@ Motivator: Submission (Relaxation & Escape). Author: RuaJ77.
 ## Mechanic
 
 Select Daisy, Poppy, or Bellflower. Press **Start garden**, then activate empty
-plots to plant. Activate a planted flower to water it and bloom its planted
-neighbors above, below, left, and right. Ripples never propagate further.
-Flower types play identically.
+plots to plant. Water a planted flower to bloom it and its planted neighbors
+above, below, left, and right. Ripples never propagate further; flower types
+play identically.
 
 Use mouse, touch, or Tab and Enter/Space; arrow keys select flowers. Actions
-are immediate. Relaxed Mode permits unlimited pauses. Timed Mode starts a
-35-second deadline at Start. Bloom all twelve plots or tend what you can
-before expiry. **Restart** resets the garden and permits choosing either mode.
-Animations never block input.
+are immediate. The optional **35-second time limit** begins at Start. Relaxed
+Mode has no deadline; all other rules are identical. Bloom twelve plots.
+**Restart** resets the garden and permits changing modes.
 
 ## Dynamic
 
-These are hypotheses awaiting human playtesting. Preparing groups may make
-shared blooms satisfying; players can also tend individual flowers. They
-control pacing and arrangement without a deadline. The identical game with a
-countdown may encourage hurried choices. No arrangement receives an efficiency
-score.
+In a playtest with another player, Relaxed Mode encouraged unhurried planting
+and watering, with flowers arranged into personally appealing patterns.
+Enabling the deadline shifted attention away from attractive arrangements
+toward efficiency, especially maximizing the watering ripple. The player
+could still complete the garden; the countdown was not excessively difficult.
 
 ## Aesthetic
 
-These are hypotheses: gentle feedback and reliable actions may support
-Submission as pastime, satisfaction, and temporary escape. Compare feelings
-across modes; the clock may introduce urgency. Feedback from another player
-is still pending.
+The player found Relaxed Mode relatively easy and felt relaxed and creatively
+satisfied. Timed Mode brought mild tension and strategic engagement. These
+observations connect the optional deadline to changed behavior and feeling,
+supporting the design hypotheses for this player without generalizing to everyone.
 
 ## Sources
 
