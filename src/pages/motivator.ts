@@ -95,14 +95,16 @@ export function renderMotivator(root: HTMLElement, atlas: Atlas, slug: string): 
       const readme = readmeFor(game.slug);
       const howTo = h("div", { class: "minigame-howto" }, h("h4", {}, "How to play"));
       const rules = h("div", {});
-      rules.innerHTML = safeBlock(readme.Mechanic ?? "This minigame's README has no Mechanic section yet.");
+      const quickStart = readme["How to play"];
+      rules.innerHTML = safeBlock(quickStart ?? readme.Mechanic ?? "This minigame's README has no Mechanic section yet.");
       howTo.append(rules);
       const about = h("details", { class: "minigame-about" }, h("summary", {}, "What it demonstrates"));
-      for (const name of ["Dynamic", "Aesthetic", "Sources"]) {
+      const explanations = quickStart ? ["Motivator(s)", "Mechanic", "Dynamic", "Aesthetic", "Sources"] : ["Dynamic", "Aesthetic", "Sources"];
+      for (const name of explanations) {
         if (!readme[name]) continue;
         const body = h("div", {});
         body.innerHTML = safeBlock(readme[name]); // student README: raw HTML is escaped
-        about.append(h("h4", {}, name), body);
+        about.append(h("h4", {}, name === "Mechanic" ? "Mechanics" : name), body);
       }
       minigameSlot.append(h("section", { class: "minigame" },
         h("h3", {}, game.title),
