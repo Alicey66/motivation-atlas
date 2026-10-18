@@ -50,7 +50,8 @@
     {name:'PACTOLUS CANYON',chapter:'FINAL CHAPTER',w:5000,sky:['#322f64','#dc6d61'],ground:'#392b47',water:[[780,1390],[2150,2850],[3840,4630]],flask:[3470,270],spawn:[80,390],goal:4870,drain:1.25,enemies:[['gorgon',560,415],['boar',940,455],['harpy',1280,260],['satyr',1740,455],['gorgon',2050,415],['boar',2450,455],['harpy',2810,240],['satyr',3320,455],['gorgon',3740,415],['boar',4120,455],['harpy',4520,250]],platforms:[[0,500,710,120],[760,520,650,100],[1480,480,570,140],[2130,520,740,100],[2940,490,800,130],[3820,520,820,100],[4700,480,300,140],[350,360,150,20],[840,380,160,20],[1260,330,150,20],[1690,370,170,20],[2200,340,170,20],[2750,310,160,20],[3290,350,170,20],[3740,330,150,20],[4280,360,160,20]],spikes:[[1410,1480],[2050,2130],[2870,2940],[3740,3820]],grass:[[910,1110],[2330,2540],[4020,4240]],treasures:[[410,310],[920,330],[1320,280],[1760,320],[2270,290],[2810,260],[3350,300],[3800,280],[4350,310]],boss:true}
   ];
   // The Atlas toggle makes the survival clock deliberately easy to feel.
-  LEVELS.forEach((level,i)=>level.drain=[1.92,2.72,3.52,4.32][i]);
+  const drainComfortTuning=.9;
+  LEVELS.forEach((level,i)=>level.drain=[1.92,2.72,3.52,4.32][i]*drainComfortTuning);
   // Teach movement safely, then introduce each enemy family before combining them.
   LEVELS.forEach((level,i)=>level.enemies=[
     [],

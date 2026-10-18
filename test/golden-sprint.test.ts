@@ -3,8 +3,8 @@ import { drainNourishment, HUNGER_DRAIN_MULTIPLIER, rankScores } from "../src/mi
 
 describe("Golden Sprint hunger toggle", () => {
   it("stops passive nourishment loss without preventing explicit damage", () => {
-    expect(HUNGER_DRAIN_MULTIPLIER).toBe(4);
-    expect(drainNourishment(100, 5, true, 1.2)).toBe(76);
+    expect(HUNGER_DRAIN_MULTIPLIER).toBe(3.6);
+    expect(drainNourishment(100, 5, true, 1.2)).toBe(78.4);
     expect(drainNourishment(100, 5, false, 1.2)).toBe(100);
 
     const enemyDamage = 12;

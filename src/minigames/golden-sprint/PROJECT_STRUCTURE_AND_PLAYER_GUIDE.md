@@ -32,7 +32,7 @@ test/
 ## How to start and play
 
 1. Open the Atlas **Progress** page and scroll to **Play with it → Golden Sprint**.
-2. Set **Hunger drains over time** above the game. This is the mechanic to compare: enabled drain is four times faster; disabled drain stops passive loss. Enemy and hazard damage still applies either way.
+2. Set **Hunger drains over time** above the game. This is the mechanic to compare: enabled drain gradually increases across rooms; disabled drain stops passive loss. Enemy and hazard damage still applies either way.
 3. Inside the game, enter a runner name and select **Begin the Myth**. Read the short story by clicking, tapping, or pressing a key. Use **Skip story** if you want to start moving sooner.
 4. Move through the four rooms, collect optional wine, touch checkpoints, and reach the River Pactolus. Room clears unlock the next room. If Midas falls, choose **Retry [room]** to try again from that room's entrance with the progress he had when he entered it.
 5. At the result screen, review the time, points, and leaderboard entry. Winning runs are ranked locally in this browser; the export button saves run history as a text file. Record what the player felt with drain on and off in the Dynamic and Aesthetic sections of `README.md`.

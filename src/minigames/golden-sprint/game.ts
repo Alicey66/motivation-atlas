@@ -1,5 +1,5 @@
-/** Pure form of the older game's central survival-clock rule. */
-export const HUNGER_DRAIN_MULTIPLIER = 4;
+/** Effective passive drain after easing the former 4x tuning by 10%. */
+export const HUNGER_DRAIN_MULTIPLIER = 3.6;
 
 export interface ScoreEntry {
   name: string;

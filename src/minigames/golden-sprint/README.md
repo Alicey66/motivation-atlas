@@ -4,7 +4,7 @@ Motivator: Progress. Author: JoshitaReddy.
 
 ## Mechanic
 
-Enter a runner name, then reach the River Pactolus through four rooms. Move with **A/D** or arrows, jump with **W**, **Up**, or **Space**, and crouch with **S** or **Down**. Use **X** to attack and **E** for bread or water healing. Touch checkpoints to save progress. The **Hunger drains over time** checkbox changes passive loss; enabled drain is 4× faster, while enemy and hazard damage stays the same. Winning runs rank locally by points and time, with drain mode recorded. Phones use onscreen controls.
+Enter a runner name, then reach the River Pactolus through four rooms. Move with **A/D** or arrows, jump with **W**, **Up**, or **Space**, and crouch with **S** or **Down**. Use **X** to attack and **E** for bread or water healing. Touch checkpoints to save progress. The **Hunger drains over time** checkbox changes passive loss, which gradually increases across rooms; enemy and hazard damage stays the same. Winning runs rank locally by points and time, with drain mode recorded. Phones use onscreen controls.
 
 ## Dynamic
 
@@ -22,4 +22,4 @@ The intended contrast is urgent, hard-won advancement with drain enabled versus 
 
 The game demonstrates a “steady stream of incremental rewards” forming “a tight loop of desire” (Salen and Zimmerman 2003, ch. 24, “Meaningful Pleasure”).
 
-Codex ported the supplied older game and synthesized its quiet minor-key loop. The HP-drain toggle was a kept Codex suggestion; its rate changed to 4× after playtesting. Artwork comes from the provided project folders. No outside code, art, or recorded sound was added.
+Codex ported the supplied older game and synthesized its quiet minor-key loop. The HP-drain toggle was a kept Codex suggestion; its rate was tuned after playtesting. Artwork comes from the provided project folders. No outside code, art, or recorded sound was added.
