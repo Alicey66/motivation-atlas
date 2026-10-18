@@ -1,6 +1,6 @@
 # Hidden Trail
 
-Motivator: discovery. Author: raycarllei. Mode comparison pending.
+Motivator: discovery. Author: raycarllei. Anonymous player feedback recorded.
 
 ## Mechanic
 
@@ -12,19 +12,19 @@ The switch preserves progress. Restart clears visits on the same map.
 
 ## Dynamic
 
-TODO: Observe another person playing with the switch on, then off. Record a
-route choice and a revisit in each mode. The hypothesis is that hiding the
-map encourages scouting, while full visibility encourages route planning.
-Note whether visit counts help the player recognize a return to familiar
-ground. Replaying teaches the layout, which limits this comparison; record
-play order and prior familiarity before interpreting differences.
+Player A compared seeing the full map with revealing it while moving. With
+only nearby tiles visible, they explored new areas as they moved. Their
+feedback did not include a detailed route or completion counts. The contrast
+concerned discovery, rather than speed. Because the map stays fixed,
+repeated play can teach the layout and influence the comparison.
 
 ## Aesthetic
 
-Player A felt the game was too random, so each attempt felt like a new
-game. The map is fixed; this describes their experience. TODO: Record which
-visibility mode prompted this response and what felt different in the other
-mode.
+With partial visibility, Player A reported a stronger sense of exploration
+and satisfaction when entering new areas, compared with seeing the full map.
+They also described the game as too random, with each attempt feeling new.
+Since the layout never changes, this suggests perceived unfamiliarity; the
+feedback does not establish actual randomness.
 
 ## Sources
 
