@@ -1,6 +1,6 @@
 # Hidden Trail
 
-Motivator: discovery. Author: raycarllei. Human playtest pending.
+Motivator: discovery. Author: raycarllei. Mode comparison pending.
 
 ## Mechanic
 
@@ -21,10 +21,10 @@ play order and prior familiarity before interpreting differences.
 
 ## Aesthetic
 
-TODO: Ask the anonymous player what they felt in each mode and record their
-own words. Ask whether uncovering a beacon changed the feeling, and whether
-visit counts clarified the route. Keep those answers separate from move
-counts. Human observations remain pending.
+Player A felt the game was too random, so each attempt felt like a new
+game. The map is fixed; this describes their experience. TODO: Record which
+visibility mode prompted this response and what felt different in the other
+mode.
 
 ## Sources
 
