@@ -1,33 +1,34 @@
-# Calm Garden
+# Calm Garden: Bloom & Arrange
 
 Motivator: Submission (Relaxation & Escape). Author: RuaJ77.
 
 ## Mechanic
 
-Choose **Start garden**, then tend twelve plots: remove weeds, plant seeds, and
-water, in that order. Each action takes 1.5 seconds; tend one plot at a time.
-Use a mouse, tap, or Tab and Enter/Space. Plants never deteriorate.
+Select Daisy, Poppy, or Bellflower. Press **Start garden**, then activate empty
+plots to plant. Activate a planted flower to water it and bloom its planted
+neighbors above, below, left, and right. Ripples never propagate further.
+Flower types play identically.
 
-With **Time limit: 75 seconds** off, finish at your own pace. With it on, complete
-as much of the identical garden as possible before expiry. Actions must
-finish before the deadline to count. **Restart** resets everything and lets you
-choose either mode. Completion or timeout ends the round and reveals reflection
-questions.
+Use mouse, touch, or Tab and Enter/Space; arrow keys select flowers. Actions
+are immediate. Relaxed Mode permits unlimited pauses. Timed Mode starts a
+35-second deadline at Start. Bloom all twelve plots or tend what you can
+before expiry. **Restart** resets the garden and permits choosing either mode.
+Animations never block input.
 
 ## Dynamic
 
-These are design hypotheses, awaiting feedback from another player. Predictable
-repetition may support a personal rhythm and pauses. With the countdown, players
-may check time and hurry. Layout, progression, and action duration stay identical,
-isolating the deadline's effect. We will revise this account after real play.
+These are hypotheses awaiting human playtesting. Preparing groups may make
+shared blooms satisfying; players can also tend individual flowers. They
+control pacing and arrangement without a deadline. The identical game with a
+countdown may encourage hurried choices. No arrangement receives an efficiency
+score.
 
 ## Aesthetic
 
-The intended experience is quiet absorption, satisfaction, and temporary escape:
-Submission as pastime. The timer may introduce urgency or frustration instead.
-These are expectations, not reported feelings. After both modes, ask what changed,
-whether repetition felt soothing or boring, and whether either mode helped you
-disengage from outside thoughts.
+These are hypotheses: gentle feedback and reliable actions may support
+Submission as pastime, satisfaction, and temporary escape. Compare feelings
+across modes; the clock may introduce urgency. Feedback from another player
+is still pending.
 
 ## Sources
 
@@ -35,8 +36,9 @@ From the course note's Submission section:
 
 Rhythmic repetition, "the meditative patterns of Tetris" (Salen and Zimmerman 2003, ch. 24, "Patterns of Pleasure").
 
-No external assets are used; garden drawings are original SVG.
+Artwork is original SVG; no external assets are used.
 
-Codex proposed a two-second action duration and a 90-second countdown. After
-reviewing the design, I chose a 1.5-second action duration and a 75-second
-countdown to reduce passive waiting while preserving time pressure.
+Codex initially proposed a three-step gardening system with timed actions.
+After personally playtesting version 1, I found it repetitive and boring. I
+requested flower selection, watering ripple, immediate feedback, and fewer
+mandatory actions.

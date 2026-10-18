@@ -1,43 +1,65 @@
 import { h, s } from "../../lib/dom";
 import type { Minigame } from "../types";
-import { ACTION_MS, PLOT_COUNT, advanceGarden, createGarden, remainingMs, startGarden, tendPlot, type PlotStage } from "./game";
+import {
+  FLOWER_TYPES, LIMIT_MS, PLOT_COUNT, advanceGarden, createGarden, remainingMs,
+  selectFlower, startGarden, tendPlot, waterTargets, type FlowerType, type GardenPlot,
+} from "./game";
 import "./calm-garden.css";
 
-const ACTIONS = ["Remove weeds", "Plant seeds", "Water plants", "Complete"];
-const TENDING = ["Removing weeds", "Planting seeds", "Watering plants"];
-const STAGES = ["Weedy", "Soil cleared", "Seeds planted", "Watered & blooming"];
+const NAMES: Record<FlowerType, string> = { daisy: "Daisy", poppy: "Poppy", bellflower: "Bellflower" };
+let mounts = 0;
 
-/** Original, decorative garden drawings; state and controls always have text labels. */
-function gardenArt(stage: PlotStage): SVGSVGElement {
-  const art = s("svg", { viewBox: "0 0 160 90", "aria-hidden": "true", focusable: "false", class: "calm-garden-art" });
-  art.append(s("ellipse", { cx: 80, cy: 74, rx: 65, ry: 10, class: "calm-garden-soil" }));
-  for (const x of [42, 80, 118]) {
-    if (stage === 0) {
-      art.append(s("path", { d: `M${x} 73l-5-24m5 24l8-32m-7 20l-14-8m13 3l13-7`, class: "calm-garden-weed" }));
-    } else if (stage === 1) {
-      art.append(s("path", { d: `M${x - 10} 72q10-8 20 0`, class: "calm-garden-furrow" }));
-    } else {
-      const top = stage === 3 ? 32 : 60;
-      art.append(
-        s("path", { d: `M${x} 74V${top}`, class: "calm-garden-stem" }),
-        s("path", { d: `M${x} ${top + 15}q-21 0-18-12q18-2 18 12m0 7q21 0 18-12q-18-2-18 12`, class: "calm-garden-leaf" }),
-      );
-      if (stage === 3) {
-        for (const [dx, dy] of [[-7, 0], [7, 0], [0, -7], [0, 7]]) {
-          art.append(s("circle", { cx: x + dx, cy: top + dy, r: 7, class: "calm-garden-petal" }));
-        }
-        art.append(s("circle", { cx: x, cy: top, r: 4, class: "calm-garden-flower" }));
-      }
+/** Original decorative SVG; every flower and action also has a written label. */
+function gardenArt(plot: GardenPlot, animate = false): SVGSVGElement {
+  const art = s("svg", {
+    viewBox: "0 0 160 100", "aria-hidden": "true", focusable: "false",
+    class: `calm-garden-art${animate ? ` calm-garden-${plot.stage}` : ""}`,
+    "data-flower": plot.flower ?? "empty",
+  });
+  art.append(s("ellipse", { cx: 80, cy: 85, rx: 60, ry: 9, class: "calm-garden-soil" }));
+  if (plot.stage === "empty") {
+    for (const x of [55, 80, 105]) art.append(s("path", { d: `M${x - 5} 84q5-4 10 0`, class: "calm-garden-furrow" }));
+    return art;
+  }
+  const bloomed = plot.stage === "bloomed";
+  const top = bloomed ? 35 : 66;
+  art.append(
+    s("path", { d: `M80 85V${top}`, class: "calm-garden-stem" }),
+    s("path", { d: "M80 70q-28 0-24-16q24-3 24 16m0 9q28 0 24-16q-24-3-24 16", class: "calm-garden-leaf" }),
+  );
+  if (!bloomed) {
+    art.append(s("ellipse", { cx: 80, cy: 63, rx: 6, ry: 9, class: "calm-garden-bud" }));
+    return art;
+  }
+  if (plot.flower === "daisy") {
+    for (let angle = 0; angle < 360; angle += 45) {
+      art.append(s("ellipse", { cx: 80, cy: 19, rx: 6, ry: 12, transform: `rotate(${angle} 80 35)`, class: "calm-garden-daisy-petal" }));
+    }
+    art.append(s("circle", { cx: 80, cy: 35, r: 9, class: "calm-garden-daisy-center" }));
+  } else if (plot.flower === "poppy") {
+    for (let angle = 0; angle < 360; angle += 90) {
+      art.append(s("ellipse", { cx: 80, cy: 24, rx: 14, ry: 15, transform: `rotate(${angle} 80 35)`, class: "calm-garden-poppy-petal" }));
+    }
+    art.append(s("circle", { cx: 80, cy: 35, r: 7, class: "calm-garden-poppy-center" }));
+  } else {
+    art.append(s("path", { d: "M80 45V22M80 23Q61 20 58 35M80 23Q99 20 102 35", class: "calm-garden-stem" }));
+    for (const [x, y] of [[58, 33], [80, 22], [102, 33]]) {
+      art.append(s("path", { d: `M${x} ${y}c-9 0-6 13-12 17q12 7 24 0c-6-4-3-17-12-17Z`, class: "calm-garden-bell" }));
     }
   }
+  if (animate) art.append(s("ellipse", { cx: 80, cy: 80, rx: 45, ry: 10, class: "calm-garden-ripple" }));
   return art;
 }
 
-// Follows the template's mount/export contract; all state belongs to this mount.
+// Retains the template's mount/export contract and the v1 lifecycle/deadline handling.
 function mount(el: HTMLElement): () => void {
+  const id = ++mounts;
   let state = createGarden();
   let timer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
+  let hovered: number | null = null;
+  let focused: number | null = null;
+  let previewTarget: number | null = null;
   const listeners: Array<() => void> = [];
 
   const toggle = h("input", { type: "checkbox", "data-mechanic": "time-limit" });
@@ -45,72 +67,91 @@ function mount(el: HTMLElement): () => void {
   const restart = h("button", { type: "button", class: "calm-garden-button calm-garden-secondary", "data-restart": "" }, "Restart");
   const mode = h("strong", { class: "calm-garden-mode" });
   const countdown = h("span", { "data-countdown": "", role: "timer", "aria-live": "off" });
+  const planted = h("span", { "data-planted": "" });
   const completed = h("span", { "data-completed": "" });
-  const totalProgress = h("progress", { max: PLOT_COUNT * 3, value: 0, "aria-label": "Garden actions completed" });
+  const totalProgress = h("progress", { max: PLOT_COUNT, value: 0, "aria-label": "Flowers blooming" });
   const status = h("p", { class: "calm-garden-status", "data-status": "", role: "status", "aria-live": "polite", "aria-atomic": "true" });
-  const actionProgress = h("progress", { max: ACTION_MS, value: 0, "aria-label": "Current tending action" });
-  const actionLabel = h("span", {}, "One plot at a time · 1.5 seconds per action");
   const modeHint = h("p", { class: "calm-garden-hint" });
-  const grid = h("ol", { class: "calm-garden-grid", "aria-label": "Twelve garden plots" });
-  const plots = Array.from({ length: PLOT_COUNT }, (_, index) => {
-    const art = h("div", { class: "calm-garden-picture" });
-    const stage = h("span", { class: "calm-garden-stage" });
-    const button = h("button", { type: "button", class: "calm-garden-button" });
-    const card = h("li", { class: "calm-garden-plot", "data-plot": index },
-      h("span", { class: "calm-garden-plot-number" }, `Plot ${index + 1}`), art, stage, button,
+  const selectionHint = h("p", { class: "calm-garden-hint" });
+  const choices = FLOWER_TYPES.map(flower => {
+    const input = h("input", { type: "radio", name: `calm-garden-flower-${id}`, value: flower, checked: flower === "daisy" });
+    const label = h("label", { class: "calm-garden-choice" },
+      input, gardenArt({ stage: "bloomed", flower }), h("span", {}, NAMES[flower]),
     );
+    return { flower, input, label };
+  });
+  const grid = h("ol", { class: "calm-garden-grid", "aria-label": "Garden: three columns and four rows" });
+  const plots = Array.from({ length: PLOT_COUNT }, (_, index) => {
+    const art = h("span", { class: "calm-garden-picture" });
+    const stage = h("span", { class: "calm-garden-stage" });
+    const action = h("span", { class: "calm-garden-plot-action" });
+    const button = h("button", { type: "button", class: "calm-garden-plot-button" },
+      h("span", { class: "calm-garden-plot-number" }, `Plot ${index + 1}`), art, stage, action,
+    );
+    const card = h("li", { class: "calm-garden-plot", "data-plot": index }, button);
     grid.append(card);
-    return { art, stage, button, card };
+    return { art, stage, action, button, card };
   });
   const reflection = h("section", { class: "calm-garden-reflection", "data-reflection": "", "aria-label": "Reflect on your garden" },
     h("h4", {}, "Then check it against your own play"),
-    h("p", {}, "Restart and try the other mode with the same garden. These questions are for you; no answers are collected."),
+    h("p", {}, "Restart and try the other mode. These questions are for you; no answers are collected."),
     h("ul", {},
-      h("li", {}, "What did you feel while tending without a timer?"),
+      h("li", {}, "What did you feel while arranging flowers without a timer?"),
+      h("li", {}, "Did choosing flowers and blooming a group feel satisfying, repetitive, or something else?"),
       h("li", {}, "What changed in your actions and feelings with the countdown enabled?"),
-      h("li", {}, "Did repetition feel soothing, satisfying, boring, or something else?"),
       h("li", {}, "Did either mode help you disengage from thoughts outside the game?"),
     ),
   );
-  const root = h("div", { class: "calm-garden", role: "group", "aria-label": "Calm Garden" },
+  const root = h("div", { class: "calm-garden", role: "group", "aria-label": "Calm Garden: Bloom & Arrange" },
     h("div", { class: "calm-garden-intro" },
-      h("span", { class: "calm-garden-eyebrow" }, "A little tending, one plot at a time"),
-      h("p", {}, "Choose a plot. Remove weeds, plant seeds, then water. Every finished plot becomes a small patch of flowers."),
+      h("span", { class: "calm-garden-eyebrow" }, "A little garden, arranged by you"),
+      h("p", {}, "Choose a flower and plant an empty plot. Water a planted flower to bloom it and its planted neighbors above, below, left, and right. No chains, no perfect arrangement."),
     ),
     h("fieldset", { class: "calm-garden-controls" },
       h("legend", {}, "Choose your pace"),
-      h("label", { class: "calm-garden-toggle" }, toggle, " Time limit: 75 seconds"),
-      modeHint,
-      h("div", { class: "calm-garden-actions" }, start, restart),
+      h("label", { class: "calm-garden-toggle" }, toggle, ` Time limit: ${LIMIT_MS / 1000} seconds`),
+      modeHint, h("div", { class: "calm-garden-actions" }, start, restart),
     ),
-    h("div", { class: "calm-garden-summary" }, mode, countdown, completed, totalProgress),
-    status,
-    h("div", { class: "calm-garden-tending" }, actionLabel, actionProgress),
-    grid, reflection,
+    h("fieldset", { class: "calm-garden-flowers" },
+      h("legend", {}, "Choose your flower"),
+      h("div", { class: "calm-garden-palette" }, ...choices.map(choice => choice.label)),
+      selectionHint,
+    ),
+    h("div", { class: "calm-garden-summary" }, mode, countdown, planted, completed, totalProgress),
+    status, grid, reflection,
   );
   el.append(root);
 
-  function listen(element: HTMLElement, event: "click" | "change", handler: () => void): void {
+  function listen(element: HTMLElement, event: keyof HTMLElementEventMap, handler: () => void): void {
     element.addEventListener(event, handler);
     listeners.push(() => element.removeEventListener(event, handler));
   }
-
   function cancelTimer(): void {
     if (timer !== null) clearTimeout(timer);
     timer = null;
   }
+  function preview(): void {
+    const targets = state.status === "playing" && previewTarget !== null ? waterTargets(state, previewTarget) : [];
+    plots.forEach(({ card }, index) => { card.dataset.preview = String(targets.includes(index)); });
+  }
 
   function render(now: number): void {
-    const count = state.plots.filter(stage => stage === 3).length;
-    const actions = state.plots.reduce<number>((sum, stage) => sum + stage, 0);
+    const count = state.plots.filter(plot => plot.stage === "bloomed").length;
+    const plantedCount = state.plots.filter(plot => plot.stage !== "empty").length;
     const ended = state.status === "complete" || state.status === "timeout";
     root.dataset.state = state.status;
     toggle.checked = state.timed;
     toggle.disabled = state.status !== "ready";
     start.setAttribute("aria-disabled", String(state.status !== "ready"));
+    choices.forEach(({ flower, input, label }) => {
+      input.checked = state.selectedFlower === flower;
+      input.disabled = ended;
+      label.dataset.selected = String(input.checked);
+    });
+    selectionHint.textContent = `Planting ${NAMES[state.selectedFlower]}. All three flowers grow the same way.`;
     mode.textContent = state.timed ? "Timed Mode" : "Relaxed Mode · no time limit";
     modeHint.textContent = state.status === "ready"
-      ? "Only the deadline changes. Choose a mode, then start."
+      ? "Only the deadline changes. Start whenever you’re ready."
       : "Restart to reset the garden and choose either mode.";
     const remaining = remainingMs(state, now);
     countdown.hidden = remaining === null;
@@ -118,32 +159,40 @@ function mount(el: HTMLElement): () => void {
       const seconds = Math.ceil(remaining / 1000);
       countdown.textContent = `Time left: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
     }
-    completed.textContent = `${count} of ${PLOT_COUNT} plots complete · ${actions} of ${PLOT_COUNT * 3} actions`;
-    totalProgress.value = actions;
-    let message = "Choose a mode, then press Start garden.";
-    if (state.status === "complete") message = "Garden complete. Take a moment to enjoy what you tended.";
-    else if (state.status === "timeout") message = `Time’s up. You completed ${count} of ${PLOT_COUNT} plots and ${actions} of ${PLOT_COUNT * 3} actions. Your work stays here to enjoy.`;
-    else if (state.active) message = `${TENDING[state.plots[state.active.plot]]} on plot ${state.active.plot + 1}…`;
-    else if (state.status === "playing") message = "Choose a plot for its next action. Nothing in the garden deteriorates.";
-    // Avoid announcing the same status on every visual clock update.
+    planted.textContent = `${plantedCount} of ${PLOT_COUNT} planted`;
+    completed.textContent = `${count} of ${PLOT_COUNT} blooming`;
+    totalProgress.value = count;
+    let message = "Choose a flower, then press Start garden.";
+    if (state.status === "complete") message = "Garden complete. Every flower is blooming. Take a moment to enjoy your arrangement.";
+    else if (state.status === "timeout") message = `Time’s up. Your garden has ${count} of ${PLOT_COUNT} flowers blooming. Your work stays here to enjoy.`;
+    else if (state.status === "playing" && state.lastAction) {
+      const action = state.lastAction;
+      const plot = action.plots[0];
+      message = action.kind === "plant"
+        ? `${NAMES[state.plots[plot].flower!]} planted on plot ${plot + 1}. Water it whenever you like.`
+        : `Watered plot ${plot + 1}: ${action.plots.length === 1 ? "one flower bloomed" : `${action.plots.length} flowers bloomed together`}.`;
+    } else if (state.status === "playing") message = "Plant and water at your own pace. Nothing in the garden deteriorates.";
     if (status.textContent !== message) status.textContent = message;
     reflection.hidden = !ended;
-    actionProgress.hidden = state.active === null;
-    actionProgress.value = state.active ? Math.max(0, ACTION_MS - (state.active.endsAt - now)) : 0;
-    actionLabel.textContent = state.active ? "Tending… let this action finish before choosing the next." : "One plot at a time · 1.5 seconds per action";
-    plots.forEach(({ art, stage, button, card }, index) => {
-      const value = state.plots[index];
-      if (card.dataset.stage !== String(value)) {
-        card.dataset.stage = String(value);
-        art.replaceChildren(gardenArt(value));
-        stage.textContent = STAGES[value];
+    plots.forEach(({ art, stage, action, button, card }, index) => {
+      const plot = state.plots[index];
+      const flower = plot.flower ?? "empty";
+      if (card.dataset.stage !== plot.stage || card.dataset.flower !== flower) {
+        card.dataset.stage = plot.stage;
+        card.dataset.flower = flower;
+        art.replaceChildren(gardenArt(plot, plot.stage !== "empty"));
+        stage.textContent = plot.flower ? NAMES[plot.flower] : "Empty soil";
       }
-      card.dataset.tending = String(state.active?.plot === index);
-      button.textContent = ACTIONS[value];
-      button.setAttribute("aria-label", `Plot ${index + 1}: ${ACTIONS[value]}`);
-      // Keep the element focusable, as Pig does, but guard every action in the rules.
-      button.setAttribute("aria-disabled", String(state.status !== "playing" || state.active !== null || value === 3));
+      const targets = waterTargets(state, index).length;
+      action.textContent = plot.stage === "empty" ? "Plant" : plot.stage === "bloomed" ? "Bloomed" : `Water ${targets}`;
+      const description = plot.stage === "empty" ? `Plant ${NAMES[state.selectedFlower]}`
+        : plot.stage === "bloomed" ? `${NAMES[plot.flower]} blooming`
+        : `Water ${targets} ${targets === 1 ? "flower" : "flowers"}, ${NAMES[plot.flower]}`;
+      button.setAttribute("aria-label", `Plot ${index + 1}: ${description}`);
+      // Keep native buttons and stable focus, as in v1; the rules guard unavailable actions.
+      button.setAttribute("aria-disabled", String(state.status !== "playing" || plot.stage === "bloomed"));
     });
+    preview();
   }
 
   function update(): void {
@@ -152,16 +201,18 @@ function mount(el: HTMLElement): () => void {
     const now = performance.now();
     state = advanceGarden(state, now);
     render(now);
-    if (state.status === "playing" && (state.active || state.timed)) {
-      const nextEvent = Math.min(state.active?.endsAt ?? Infinity, state.deadline ?? Infinity);
-      timer = setTimeout(update, Math.min(100, Math.max(1, nextEvent - now)));
+    if (state.status === "playing" && state.deadline !== null) {
+      timer = setTimeout(update, Math.min(250, Math.max(1, state.deadline - now)));
     }
   }
-
   listen(toggle, "change", () => {
-    if (state.status === "ready") state = createGarden(toggle.checked);
+    if (state.status === "ready") state = { ...createGarden(toggle.checked), selectedFlower: state.selectedFlower };
     update();
   });
+  choices.forEach(({ flower, input }) => listen(input, "change", () => {
+    state = selectFlower(advanceGarden(state, performance.now()), flower);
+    update();
+  }));
   listen(start, "click", () => {
     state = startGarden(state, performance.now());
     update();
@@ -169,12 +220,20 @@ function mount(el: HTMLElement): () => void {
   listen(restart, "click", () => {
     cancelTimer();
     state = createGarden(state.timed);
+    hovered = focused = previewTarget = null;
     update();
   });
-  plots.forEach(({ button }, index) => listen(button, "click", () => {
-    state = tendPlot(state, index, performance.now());
-    update();
-  }));
+  plots.forEach(({ button }, index) => {
+    listen(button, "click", () => {
+      state = tendPlot(state, index, performance.now());
+      update();
+    });
+    // Follow the latest input, so a parked mouse cannot override keyboard focus.
+    listen(button, "pointerenter", () => { hovered = previewTarget = index; preview(); });
+    listen(button, "pointerleave", () => { hovered = null; previewTarget = focused; preview(); });
+    listen(button, "focus", () => { focused = previewTarget = index; preview(); });
+    listen(button, "blur", () => { focused = null; previewTarget = hovered; preview(); });
+  });
   update();
 
   return () => {
@@ -186,5 +245,5 @@ function mount(el: HTMLElement): () => void {
 }
 
 export const calmGarden: Minigame = {
-  slug: "calm-garden", title: "Calm Garden", motivators: ["submission"], author: "RuaJ77", mount,
+  slug: "calm-garden", title: "Calm Garden: Bloom & Arrange", motivators: ["submission"], author: "RuaJ77", mount,
 };

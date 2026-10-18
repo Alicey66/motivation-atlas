@@ -1,376 +1,451 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { calmGarden } from "../src/minigames/calm-garden";
 import {
-  ACTION_MS, LIMIT_MS, PLOT_COUNT, advanceGarden, createGarden,
-  remainingMs, startGarden, tendPlot,
+  COLUMNS, FLOWER_TYPES, LIMIT_MS, PLOT_COUNT, adjacentPlots, advanceGarden,
+  createGarden, remainingMs, selectFlower, startGarden, tendPlot, waterTargets,
+  type FlowerType, type GardenState,
 } from "../src/minigames/calm-garden/game";
 
-function finishGarden(timed: boolean) {
+function plantedGarden(timed = false): GardenState {
   let state = startGarden(createGarden(timed), 0);
-  let now = 0;
-  for (let plot = 0; plot < PLOT_COUNT; plot++) {
-    for (let step = 0; step < 3; step++) {
-      state = tendPlot(state, plot, now);
-      now += ACTION_MS;
-      state = advanceGarden(state, now);
-    }
-  }
+  for (let plot = 0; plot < PLOT_COUNT; plot++) state = tendPlot(state, plot, 0);
   return state;
 }
 
-describe("Calm Garden rules", () => {
-  it("starts with twelve untouched plots and the approved timing", () => {
+function completedGarden(timed = false): GardenState {
+  let state = plantedGarden(timed);
+  for (const plot of [1, 3, 5, 10]) state = tendPlot(state, plot, 1000);
+  return state;
+}
+
+describe("Calm Garden 2 rules", () => {
+  it("starts with twelve empty plots, a default Daisy, three columns, and a 35-second deadline", () => {
     const state = createGarden();
     expect(PLOT_COUNT).toBe(12);
-    expect(ACTION_MS).toBe(1500);
-    expect(LIMIT_MS).toBe(75000);
-    expect(state.plots).toEqual(Array(12).fill(0));
+    expect(COLUMNS).toBe(3);
+    expect(LIMIT_MS).toBe(35000);
+    expect(FLOWER_TYPES).toEqual(["daisy", "poppy", "bellflower"]);
+    expect(state.plots).toEqual(Array.from({ length: 12 }, () => ({ stage: "empty", flower: null })));
+    expect(state.selectedFlower).toBe("daisy");
     expect(state.status).toBe("ready");
-    expect(state.timed).toBe(false);
-    expect(state.active).toBeNull();
+    expect(state.lastAction).toBeNull();
     expect(remainingMs(state, 100000)).toBeNull();
   });
 
-  it("waits for Start before accepting work or starting the deadline", () => {
+  it("waits for Start before accepting work or consuming time", () => {
     const ready = createGarden(true);
     expect(tendPlot(ready, 0, 10000)).toBe(ready);
     expect(advanceGarden(ready, 100000)).toBe(ready);
-    expect(remainingMs(ready, 100000)).toBe(75000);
+    expect(remainingMs(ready, 100000)).toBe(35000);
     const playing = startGarden(ready, 10000);
-    expect(playing.deadline).toBe(85000);
+    expect(playing.deadline).toBe(45000);
     expect(startGarden(playing, 20000)).toBe(playing);
   });
 
-  it("advances weeds, seeds, and watering only after each full action", () => {
-    let state = startGarden(createGarden(), 0);
-    for (let stage = 0; stage < 3; stage++) {
-      const before = state;
-      state = tendPlot(state, 4, stage * ACTION_MS);
-      expect(before.active).toBeNull();
-      expect(state.plots[4]).toBe(stage);
-      expect(advanceGarden(state, (stage + 1) * ACTION_MS - 1).plots[4]).toBe(stage);
-      state = advanceGarden(state, (stage + 1) * ACTION_MS);
-      expect(state.plots[4]).toBe(stage + 1);
-      expect(state.active).toBeNull();
-    }
-    expect(tendPlot(state, 4, 5000)).toBe(state);
-    expect(state.plots.filter(stage => stage === 3)).toHaveLength(1);
+  it.each(["daisy", "poppy", "bellflower"] as const)("plants and waters %s immediately without advancing the clock", flower => {
+    const ready = selectFlower(createGarden(), flower);
+    let state = tendPlot(startGarden(ready, 0), 4, 0);
+    expect(state.plots[4]).toEqual({ stage: "planted", flower });
+    expect(state.lastAction).toEqual({ kind: "plant", plots: [4] });
+    state = tendPlot(state, 4, 0);
+    expect(state.plots[4]).toEqual({ stage: "bloomed", flower });
+    expect(state.lastAction).toEqual({ kind: "water", plots: [4] });
   });
 
-  it("allows any plot order but prevents overlapping or queued actions", () => {
-    const state = tendPlot(startGarden(createGarden(), 0), 11, 0);
-    expect(tendPlot(state, 0, 500)).toBe(state);
-    expect(tendPlot(state, 11, 500)).toBe(state);
-    expect(advanceGarden(state, 100000).plots).toEqual([...Array(11).fill(0), 1]);
+  it("stores planted flowers independently of subsequent selections", () => {
+    const first = tendPlot(startGarden(createGarden(), 0), 0, 0);
+    const second = tendPlot(selectFlower(first, "poppy"), 1, 0);
+    expect(first.selectedFlower).toBe("daisy");
+    expect(first.plots[1].stage).toBe("empty");
+    expect(second.plots[0].flower).toBe("daisy");
+    expect(second.plots[1].flower).toBe("poppy");
+    expect(tendPlot(second, 0, 0).plots[0].flower).toBe("daisy");
+  });
+
+  it("ignores unknown flower selections", () => {
+    const state = createGarden();
+    expect(selectFlower(state, "unknown" as FlowerType)).toBe(state);
+  });
+
+  it.each([
+    [0, [1, 3]], [1, [0, 2, 4]], [2, [1, 5]],
+    [3, [0, 4, 6]], [4, [1, 3, 5, 7]], [5, [2, 4, 8]],
+    [6, [3, 7, 9]], [7, [4, 6, 8, 10]], [8, [5, 7, 11]],
+    [9, [6, 10]], [10, [7, 9, 11]], [11, [8, 10]],
+  ] as const)("finds the orthogonal neighbors of plot %s", (plot, expected) => {
+    expect(adjacentPlots(plot).sort((a, b) => a - b)).toEqual(expected);
+  });
+
+  it.each([
+    [0, [0, 1, 3]], [1, [0, 1, 2, 4]], [4, [1, 3, 4, 5, 7]], [11, [8, 10, 11]],
+  ] as const)("blooms only one ripple around corner, edge, or interior plot %s", (plot, expected) => {
+    const state = plantedGarden();
+    expect(waterTargets(state, plot).sort((a, b) => a - b)).toEqual(expected);
+    const watered = tendPlot(state, plot, 0);
+    expect(watered.plots.flatMap((p, index) => p.stage === "bloomed" ? [index] : [])).toEqual(expected);
+    expect(state.plots.every(p => p.stage === "planted")).toBe(true);
+  });
+
+  it("never propagates diagonally, wraps rows, or recurses through newly bloomed neighbors", () => {
+    const state = plantedGarden();
+    const center = tendPlot(state, 4, 0);
+    for (const plot of [0, 2, 6, 8, 9, 10, 11]) expect(center.plots[plot].stage).toBe("planted");
+    const edge = tendPlot(state, 2, 0);
+    expect(edge.plots[3].stage).toBe("planted");
+    expect(edge.plots[8].stage).toBe("planted");
+  });
+
+  it("ignores empty and bloomed neighbors and preserves the flowers' appearances", () => {
+    let state = startGarden(createGarden(), 0);
+    state = tendPlot(tendPlot(state, 1, 0), 1, 0);
+    state = tendPlot(state, 4, 0);
+    state = tendPlot(selectFlower(state, "poppy"), 5, 0);
+    state = tendPlot(selectFlower(state, "bellflower"), 7, 0);
+    expect(waterTargets(state, 4).sort()).toEqual([4, 5, 7]);
+    const watered = tendPlot(state, 4, 0);
+    expect(watered.plots[3]).toEqual({ stage: "empty", flower: null });
+    expect(watered.plots[1]).toEqual({ stage: "bloomed", flower: "daisy" });
+    expect(watered.plots[5]).toEqual({ stage: "bloomed", flower: "poppy" });
+    expect(watered.plots[7]).toEqual({ stage: "bloomed", flower: "bellflower" });
+    expect(tendPlot(watered, 4, 0)).toBe(watered);
+    expect(waterTargets(watered, 4)).toEqual([]);
+    expect(waterTargets(watered, 3)).toEqual([]);
   });
 
   it.each([-1, 12, 0.5, NaN])("ignores invalid plot index %s", plot => {
     const state = startGarden(createGarden(), 0);
     expect(tendPlot(state, plot, 0)).toBe(state);
+    expect(adjacentPlots(plot)).toEqual([]);
+    expect(waterTargets(state, plot)).toEqual([]);
   });
 
-  it("has identical plot progression in both modes before the deadline", () => {
-    let relaxed = startGarden(createGarden(false), 0);
-    let timed = startGarden(createGarden(true), 0);
-    for (let action = 0; action < 20; action++) {
-      const now = action * ACTION_MS;
-      const plot = Math.floor(action / 3);
-      relaxed = advanceGarden(tendPlot(relaxed, plot, now), now + ACTION_MS);
-      timed = advanceGarden(tendPlot(timed, plot, now), now + ACTION_MS);
+  it("has identical progression in both modes before the deadline", () => {
+    let relaxed = plantedGarden(false);
+    let timed = plantedGarden(true);
+    for (let plot = 0; plot < 12; plot++) {
+      relaxed = tendPlot(relaxed, plot, 1000);
+      timed = tendPlot(timed, plot, 1000);
       expect(timed.plots).toEqual(relaxed.plots);
-      expect(timed.active).toEqual(relaxed.active);
       expect(timed.status).toBe(relaxed.status);
+      expect(timed.lastAction).toEqual(relaxed.lastAction);
     }
   });
 
   it("never expires relaxed play, even after a long pause", () => {
     const state = startGarden(createGarden(), 0);
-    expect(advanceGarden(state, 999999999).status).toBe("playing");
-    expect(tendPlot(state, 2, 999999999).active?.plot).toBe(2);
+    expect(advanceGarden(state, 999999999)).toBe(state);
+    expect(tendPlot(state, 2, 999999999).plots[2].stage).toBe("planted");
   });
 
-  it("expires at exactly 75 seconds and retains partial work", () => {
+  it("accepts planting and watering just before the deadline", () => {
     let state = startGarden(createGarden(true), 0);
-    state = advanceGarden(tendPlot(state, 0, 0), ACTION_MS);
-    expect(advanceGarden(state, LIMIT_MS - 1).status).toBe("playing");
-    expect(remainingMs(state, LIMIT_MS - 1)).toBe(1);
-    state = advanceGarden(state, LIMIT_MS);
-    expect(state.status).toBe("timeout");
-    expect(state.plots[0]).toBe(1);
-    expect(remainingMs(state, 999999)).toBe(0);
-    expect(tendPlot(state, 1, LIMIT_MS)).toBe(state);
+    state = tendPlot(state, 0, LIMIT_MS - 1);
+    state = tendPlot(state, 0, LIMIT_MS - 1);
+    expect(state.plots[0].stage).toBe("bloomed");
+    expect(state.status).toBe("playing");
   });
 
-  it.each([LIMIT_MS, LIMIT_MS + 1])("does not credit an action finishing at or after the deadline (%s)", end => {
-    const state = tendPlot(startGarden(createGarden(true), 0), 0, end - ACTION_MS);
-    const expired = advanceGarden(state, end);
+  it.each([35000, 35001, 45000])("rejects actions at or after expiry (%s), even before a scheduled tick", now => {
+    const state = tendPlot(startGarden(createGarden(true), 0), 0, 0);
+    const expired = tendPlot(state, 0, now);
     expect(expired.status).toBe("timeout");
-    expect(expired.plots[0]).toBe(0);
-    expect(expired.active).toBeNull();
+    expect(expired.plots[0].stage).toBe("planted");
+    expect(expired.endedAt).toBe(35000);
+    expect(remainingMs(expired, 999999)).toBe(0);
+    expect(tendPlot(expired, 1, now)).toBe(expired);
+    expect(selectFlower(expired, "poppy")).toBe(expired);
   });
 
-  it("credits work completed before the deadline despite a delayed callback", () => {
-    const state = tendPlot(startGarden(createGarden(true), 0), 0, LIMIT_MS - ACTION_MS - 1);
-    const expired = advanceGarden(state, LIMIT_MS + 10000);
-    expect(expired.status).toBe("timeout");
-    expect(expired.plots[0]).toBe(1);
-  });
-
-  it.each([false, true])("ends on full completion with the time limit set to %s", timed => {
-    const state = finishGarden(timed);
+  it.each([false, true])("completes on the last ripple and freezes the outcome (timed: %s)", timed => {
+    const state = completedGarden(timed);
     expect(state.status).toBe("complete");
-    expect(state.plots).toEqual(Array(12).fill(3));
-    expect(state.endedAt).toBe(54000);
+    expect(state.plots.every(plot => plot.stage === "bloomed")).toBe(true);
+    expect(state.endedAt).toBe(1000);
+    expect(state.lastAction?.plots.length).toBeGreaterThan(1);
     expect(advanceGarden(state, 999999)).toBe(state);
-    expect(tendPlot(state, 0, 55000)).toBe(state);
-    expect(remainingMs(state, 999999)).toBe(timed ? 21000 : null);
+    expect(tendPlot(state, 0, 999999)).toBe(state);
+    expect(selectFlower(state, "poppy")).toBe(state);
+    expect(remainingMs(state, 999999)).toBe(timed ? 34000 : null);
   });
 
-  it("preserves early completion when the final callback arrives after the deadline", () => {
-    let state = startGarden(createGarden(true), 0);
-    for (let action = 0; action < 35; action++) {
-      state = advanceGarden(tendPlot(state, Math.floor(action / 3), action * ACTION_MS), (action + 1) * ACTION_MS);
-    }
-    state = tendPlot(state, 11, 52500);
-    expect(advanceGarden(state, 100000).status).toBe("complete");
-  });
-
-  it("creates independent gardens without mutating previous states", () => {
-    const first = createGarden(true);
-    const playing = startGarden(first, 0);
-    const next = advanceGarden(tendPlot(playing, 0, 0), ACTION_MS);
-    expect(first.status).toBe("ready");
-    expect(playing.plots[0]).toBe(0);
-    expect(next.plots[0]).toBe(1);
-    expect(createGarden(true)).toEqual(first);
+  it("creates independent states without mutating previous gardens", () => {
+    const ready = createGarden(true);
+    const playing = startGarden(ready, 0);
+    const planted = tendPlot(playing, 0, 0);
+    expect(ready.status).toBe("ready");
+    expect(playing.plots[0].stage).toBe("empty");
+    expect(planted.plots[0].stage).toBe("planted");
+    expect(createGarden(true)).toEqual(ready);
   });
 });
 
-const cleanups: Array<() => void> = [];
-afterEach(() => {
-  cleanups.splice(0).forEach(cleanup => cleanup());
-  vi.restoreAllMocks();
-  vi.useRealTimers();
-});
-
+const disposers: Array<() => void> = [];
 function mountGarden(timed = false) {
-  vi.useFakeTimers();
-  vi.setSystemTime(0);
-  vi.spyOn(performance, "now").mockImplementation(() => Date.now());
-  const el = document.createElement("div");
-  document.body.append(el);
-  const unmount = calmGarden.mount(el);
-  cleanups.push(() => { unmount(); el.remove(); });
-  const q = <T extends HTMLElement = HTMLElement>(selector: string) => el.querySelector<T>(selector)!;
+  const host = document.createElement("div");
+  document.body.append(host);
+  const unmount = calmGarden.mount(host);
+  disposers.push(() => { unmount(); host.remove(); });
+  const q = <T extends HTMLElement = HTMLElement>(selector: string) => host.querySelector<T>(selector)!;
   const toggle = q<HTMLInputElement>("[data-mechanic='time-limit']");
   if (timed) toggle.click();
   return {
-    el, q, toggle, unmount,
+    host, q, toggle, unmount,
     start: () => q<HTMLButtonElement>("[data-start]").click(),
     restart: () => q<HTMLButtonElement>("[data-restart]").click(),
     plot: (index: number) => q<HTMLButtonElement>(`[data-plot='${index}'] button`),
+    flower: (flower: FlowerType) => q<HTMLInputElement>(`input[type='radio'][value='${flower}']`),
   };
 }
+function finishUI(game: ReturnType<typeof mountGarden>) {
+  for (let plot = 0; plot < 12; plot++) game.plot(plot).click();
+  for (const plot of [1, 3, 5, 10]) game.plot(plot).click();
+}
 
-describe("Calm Garden interface", () => {
-  it("mounts the registered garden with twelve accessible plots and no active timers", () => {
-    const { el, q, toggle } = mountGarden();
+describe("Calm Garden 2 interface", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    vi.spyOn(performance, "now").mockImplementation(() => Date.now());
+  });
+  afterEach(() => {
+    disposers.splice(0).forEach(dispose => dispose());
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("mounts twelve empty plots, native flower choices, and a time-limit checkbox", () => {
+    const game = mountGarden();
     expect(calmGarden.slug).toBe("calm-garden");
     expect(calmGarden.author).toBe("RuaJ77");
     expect(calmGarden.motivators).toEqual(["submission"]);
-    expect(el.querySelectorAll("[data-plot]")).toHaveLength(12);
-    expect(toggle.checked).toBe(false);
-    expect(toggle.closest("label")?.textContent).toContain("Time limit: 75 seconds");
-    expect(q("[data-countdown]").hidden).toBe(true);
-    expect(q("[data-reflection]").hidden).toBe(true);
-    expect(q("[data-status]").textContent).toContain("Start garden");
+    expect(game.host.querySelectorAll("[data-plot][data-stage='empty']")).toHaveLength(12);
+    expect(game.host.querySelectorAll("input[type='radio']")).toHaveLength(3);
+    expect(game.flower("daisy").checked).toBe(true);
+    expect(game.flower("poppy").closest("label")?.textContent).toContain("Poppy");
+    expect(game.toggle.type).toBe("checkbox");
+    expect(game.toggle.closest("label")?.textContent).toContain("35 seconds");
+    expect(game.q("[data-countdown]").hidden).toBe(true);
+    expect(game.q("[data-reflection]").hidden).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("does not allow tending before Start", () => {
-    const { plot, q } = mountGarden();
-    plot(0).click();
-    vi.advanceTimersByTime(ACTION_MS);
-    expect(q("[data-plot='0']").dataset.stage).toBe("0");
+  it("allows choosing a flower before Start but ignores plot input until then", () => {
+    const game = mountGarden();
+    game.flower("poppy").click();
+    game.plot(0).click();
+    expect(game.q("[data-plot='0']").dataset.stage).toBe("empty");
+    game.start();
+    expect(game.plot(0).getAttribute("aria-label")).toContain("Plant Poppy");
+    game.plot(0).click();
+    expect(game.q("[data-plot='0']").dataset.flower).toBe("poppy");
+    game.flower("bellflower").click();
+    game.plot(1).click();
+    expect(game.q("[data-plot='1']").dataset.flower).toBe("bellflower");
+    expect(game.q("[data-plot='0']").dataset.flower).toBe("poppy");
+    expect(game.q("[data-planted]").textContent).toContain("2 of 12");
+  });
+
+  it("accepts successive actions instantly during visual feedback", () => {
+    const game = mountGarden();
+    game.start();
+    game.plot(0).click();
+    game.plot(1).click();
+    expect(game.plot(0).getAttribute("aria-disabled")).toBe("false");
+    game.plot(0).click();
+    expect(game.q("[data-plot='0']").dataset.stage).toBe("bloomed");
+    expect(game.q("[data-plot='1']").dataset.stage).toBe("bloomed");
+    expect(game.q("[data-completed]").textContent).toContain("2 of 12");
+    expect(game.q("[data-status]").textContent).toContain("2 flowers bloomed together");
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("shows the selected countdown but does not consume it before Start", () => {
-    const { q, start } = mountGarden(true);
-    expect(q("[data-countdown]").hidden).toBe(false);
-    expect(q("[data-countdown]").textContent).toContain("1:15");
-    vi.advanceTimersByTime(90000);
-    expect(q("[data-countdown]").textContent).toContain("1:15");
-    start();
-    vi.advanceTimersByTime(5000);
-    expect(q("[data-countdown]").textContent).toContain("1:10");
+  it("previews exactly the planted ripple targets on focus and preserves keyboard focus", () => {
+    const game = mountGarden();
+    game.start();
+    for (const plot of [0, 1, 4, 5]) game.plot(plot).click();
+    game.plot(1).focus();
+    expect(game.plot(1).tagName).toBe("BUTTON");
+    expect(game.plot(1).type).toBe("button");
+    expect(game.plot(1).getAttribute("aria-label")).toContain("Water 3 flowers");
+    const targets = Array.from(game.host.querySelectorAll<HTMLElement>("[data-preview='true']"), el => Number(el.dataset.plot));
+    expect(targets).toEqual([0, 1, 4]);
+    game.plot(1).click();
+    expect(document.activeElement).toBe(game.plot(1));
+    expect(game.q("[data-plot='5']").dataset.stage).toBe("planted");
+    expect(game.plot(1).getAttribute("aria-disabled")).toBe("true");
+    expect(game.host.querySelectorAll("[data-preview='true']")).toHaveLength(0);
   });
 
-  it("locks the mode during play and restores it if a change event is forced", () => {
-    const { start, toggle, q } = mountGarden(true);
-    start();
-    expect(toggle.disabled).toBe(true);
-    toggle.checked = false;
-    toggle.dispatchEvent(new Event("change"));
-    expect(toggle.checked).toBe(true);
-    vi.advanceTimersByTime(LIMIT_MS);
-    expect(q("[data-status]").textContent).toContain("Time’s up");
-  });
-
-  it("keeps plot focus while tending and advances the next action after 1.5 seconds", () => {
-    const { start, plot, q } = mountGarden();
-    start();
-    const button = plot(0);
-    button.focus();
-    button.click();
-    plot(1).click();
-    expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(q("[data-status]").textContent).toContain("Removing weeds");
-    vi.advanceTimersByTime(1499);
-    expect(q("[data-plot='0']").dataset.stage).toBe("0");
-    vi.advanceTimersByTime(1);
-    expect(document.activeElement).toBe(button);
-    expect(button.textContent).toBe("Plant seeds");
-    expect(button.getAttribute("aria-label")).toContain("Plot 1");
-    expect(q("[data-plot='0']").dataset.stage).toBe("1");
-    expect(q("[data-plot='1']").dataset.stage).toBe("0");
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("keeps relaxed play available after a long idle period without idle timers", () => {
-    const { start, plot, q } = mountGarden();
-    start();
-    expect(vi.getTimerCount()).toBe(0);
-    vi.advanceTimersByTime(3600000);
-    plot(0).click();
-    vi.advanceTimersByTime(ACTION_MS);
-    expect(q("[data-plot='0']").dataset.stage).toBe("1");
-    expect(q("[data-countdown]").hidden).toBe(true);
-  });
-
-  it.each([false, true])("finishes the whole garden and reveals reflection (timed: %s)", timed => {
-    const { start, plot, q } = mountGarden(timed);
-    start();
-    for (let index = 0; index < 12; index++) {
-      for (let stage = 0; stage < 3; stage++) {
-        plot(index).click();
-        vi.advanceTimersByTime(ACTION_MS);
-      }
+  it("uses visibly distinct original SVG geometry for each flower", () => {
+    const game = mountGarden();
+    game.start();
+    for (const [plot, flower] of FLOWER_TYPES.entries()) {
+      game.flower(flower).click();
+      game.plot(plot).click();
+      game.plot(plot).click();
     }
-    expect(q("[data-status]").textContent).toContain("Garden complete");
-    expect(q("[data-completed]").textContent).toContain("12 of 12");
-    expect(q("[data-reflection]").hidden).toBe(false);
-    expect(q("[data-reflection]").textContent).toContain("What did you feel");
-    expect(q("[data-reflection]").textContent).toContain("countdown");
-    expect(vi.getTimerCount()).toBe(0);
-    plot(0).click();
-    start();
-    expect(q("[data-status]").textContent).toContain("Garden complete");
+    const shapes = FLOWER_TYPES.map((_, plot) => game.q(`[data-plot='${plot}'] svg`).innerHTML);
+    expect(new Set(shapes).size).toBe(3);
+    expect(game.host.querySelector("img, audio, video, iframe")).toBeNull();
   });
 
-  it("times out with partial progress, stops work, and reveals reflection", () => {
-    const { start, plot, q } = mountGarden(true);
-    start();
-    plot(0).click();
-    vi.advanceTimersByTime(ACTION_MS);
-    vi.advanceTimersByTime(LIMIT_MS - ACTION_MS - 500);
-    plot(0).click();
-    vi.advanceTimersByTime(500);
-    expect(q("[data-status]").textContent).toContain("Time’s up");
-    expect(q("[data-status]").textContent).toContain("1 of 36");
-    expect(q("[data-plot='0']").dataset.stage).toBe("1");
-    expect(q("[data-reflection]").hidden).toBe(false);
-    expect(q("[data-countdown]").textContent).toContain("0:00");
-    expect(vi.getTimerCount()).toBe(0);
-    plot(1).click();
-    vi.advanceTimersByTime(ACTION_MS);
-    expect(q("[data-plot='1']").dataset.stage).toBe("0");
+  it("makes the ripple preview follow the latest pointer or keyboard interaction", () => {
+    const game = mountGarden();
+    game.start();
+    for (let plot = 0; plot < 12; plot++) game.plot(plot).click();
+    const previewed = () => Array.from(game.host.querySelectorAll<HTMLElement>("[data-preview='true']"), el => Number(el.dataset.plot));
+    game.plot(0).dispatchEvent(new Event("pointerenter"));
+    expect(previewed()).toEqual([0, 1, 3]);
+    game.plot(1).focus();
+    expect(previewed()).toEqual([0, 1, 2, 4]);
+    game.plot(4).dispatchEvent(new Event("pointerenter"));
+    expect(previewed()).toEqual([1, 3, 4, 5, 7]);
+    game.plot(4).dispatchEvent(new Event("pointerleave"));
+    expect(previewed()).toEqual([0, 1, 2, 4]);
+    game.plot(1).click();
+    expect(game.q("[data-plot='2']").dataset.stage).toBe("bloomed");
+    expect(game.q("[data-plot='3']").dataset.stage).toBe("planted");
   });
 
-  it.each([false, true])("restart cancels pending work and restores ready state (timed: %s)", timed => {
-    const { start, plot, restart, q, toggle } = mountGarden(timed);
-    start();
-    plot(0).click();
-    vi.advanceTimersByTime(500);
-    restart();
-    expect(vi.getTimerCount()).toBe(0);
-    expect(toggle.checked).toBe(timed);
-    expect(toggle.disabled).toBe(false);
-    expect(q("[data-status]").textContent).toContain("Start garden");
+  it("shows the selected countdown without consuming it before Start", () => {
+    const game = mountGarden(true);
+    expect(game.q("[data-countdown]").textContent).toContain("0:35");
     vi.advanceTimersByTime(100000);
-    expect(q("[data-plot='0']").dataset.stage).toBe("0");
-    toggle.click();
-    start();
-    expect(q("[data-countdown]").hidden).toBe(timed);
+    expect(game.q("[data-countdown]").textContent).toContain("0:35");
+    game.start();
+    vi.advanceTimersByTime(5000);
+    expect(game.q("[data-countdown]").textContent).toContain("0:30");
   });
 
-  it.each(["complete", "timeout"])("can restart after %s", ending => {
-    const { start, restart, plot, q } = mountGarden(true);
-    start();
-    if (ending === "complete") {
-      for (let action = 0; action < 36; action++) {
-        plot(Math.floor(action / 3)).click();
-        vi.advanceTimersByTime(ACTION_MS);
-      }
-    } else vi.advanceTimersByTime(LIMIT_MS);
-    restart();
-    expect(q("[data-reflection]").hidden).toBe(true);
-    expect(q("[data-countdown]").textContent).toContain("1:15");
-    start();
-    expect(q("[data-status]").textContent).not.toContain("Time’s up");
+  it("locks only the time-limit toggle during play and restores forced changes", () => {
+    const game = mountGarden(true);
+    game.start();
+    expect(game.toggle.disabled).toBe(true);
+    expect(game.flower("poppy").disabled).toBe(false);
+    game.toggle.checked = false;
+    game.toggle.dispatchEvent(new Event("change"));
+    expect(game.toggle.checked).toBe(true);
+    vi.advanceTimersByTime(LIMIT_MS);
+    expect(game.q("[data-status]").textContent).toContain("Time’s up");
   });
 
-  it("unmount cancels timers and removes listeners even on retained controls", () => {
-    const { start, plot, toggle, unmount, el, q } = mountGarden(true);
-    const startButton = q<HTMLButtonElement>("[data-start]");
-    const restartButton = q<HTMLButtonElement>("[data-restart]");
-    const plotButton = plot(0);
-    start();
-    plotButton.click();
+  it("checks the actual deadline on input before a delayed timer callback", () => {
+    const game = mountGarden(true);
+    game.start();
+    game.plot(0).click();
+    vi.setSystemTime(LIMIT_MS);
+    game.plot(0).click();
+    expect(game.q("[data-plot='0']").dataset.stage).toBe("planted");
+    expect(game.q("[data-status]").textContent).toContain("Time’s up");
+    expect(game.q("[data-countdown]").textContent).toContain("0:00");
+    expect(game.q("[data-reflection]").hidden).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("lets relaxed play remain idle indefinitely without scheduling timers", () => {
+    const game = mountGarden();
+    game.start();
+    vi.advanceTimersByTime(3600000);
+    game.plot(0).click();
+    game.plot(0).click();
+    expect(game.q("[data-plot='0']").dataset.stage).toBe("bloomed");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([false, true])("completes and offers reflection with the same actions (timed: %s)", timed => {
+    const game = mountGarden(timed);
+    game.start();
+    finishUI(game);
+    expect(game.q(".calm-garden").dataset.state).toBe("complete");
+    expect(game.q("[data-completed]").textContent).toContain("12 of 12");
+    expect(game.q("[data-reflection]").hidden).toBe(false);
+    expect(game.q("[data-reflection]").textContent).toContain("What did you feel");
+    expect(game.q("[data-reflection]").textContent).toContain("countdown");
+    expect(game.q("[data-reflection]").querySelector("input, textarea")).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+    game.plot(0).click();
+    game.start();
+    expect(game.q(".calm-garden").dataset.state).toBe("complete");
+  });
+
+  it.each(["playing", "complete", "timeout"])("restart resets a %s garden and permits choosing either mode", phase => {
+    const game = mountGarden(true);
+    game.flower("poppy").click();
+    game.start();
+    if (phase === "complete") finishUI(game);
+    else {
+      game.plot(0).click();
+      if (phase === "timeout") vi.advanceTimersByTime(LIMIT_MS);
+    }
+    game.restart();
+    expect(game.q(".calm-garden").dataset.state).toBe("ready");
+    expect(game.host.querySelectorAll("[data-stage='empty']")).toHaveLength(12);
+    expect(game.flower("daisy").checked).toBe(true);
+    expect(game.toggle.checked).toBe(true);
+    expect(game.toggle.disabled).toBe(false);
+    expect(game.q("[data-countdown]").textContent).toContain("0:35");
+    expect(game.q("[data-reflection]").hidden).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(100000);
+    expect(game.q(".calm-garden").dataset.state).toBe("ready");
+    game.toggle.click();
+    game.start();
+    expect(game.q("[data-countdown]").hidden).toBe(true);
+  });
+
+  it("unmount clears timers and removes listeners from retained controls", () => {
+    const game = mountGarden(true);
+    const start = game.q<HTMLButtonElement>("[data-start]");
+    const restart = game.q<HTMLButtonElement>("[data-restart]");
+    const flower = game.flower("poppy");
+    const plot = game.plot(0);
+    game.start();
+    plot.click();
     expect(vi.getTimerCount()).toBeGreaterThan(0);
-    unmount();
-    expect(el.childNodes).toHaveLength(0);
+    game.unmount();
+    expect(game.host.childNodes).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
-    restartButton.click();
-    toggle.dispatchEvent(new Event("change"));
-    startButton.click();
-    plotButton.click();
+    restart.click();
+    start.click();
+    flower.dispatchEvent(new Event("change"));
+    plot.dispatchEvent(new Event("pointerenter"));
+    plot.focus();
+    plot.click();
     vi.advanceTimersByTime(100000);
-    expect(el.childNodes).toHaveLength(0);
+    expect(game.host.childNodes).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
-    unmount();
+    game.unmount();
   });
 
-  it("keeps two mounted gardens independent", () => {
+  it("keeps state and native radio groups independent across mounts", () => {
     const first = mountGarden();
     const second = mountGarden(true);
+    first.flower("poppy").click();
+    expect(second.flower("daisy").checked).toBe(true);
+    expect(first.flower("poppy").name).not.toBe(second.flower("poppy").name);
     first.start();
     second.start();
-    first.plot(2).click();
-    vi.advanceTimersByTime(ACTION_MS);
-    expect(first.q("[data-plot='2']").dataset.stage).toBe("1");
-    expect(second.q("[data-plot='2']").dataset.stage).toBe("0");
+    first.plot(0).click();
+    expect(second.q("[data-plot='0']").dataset.stage).toBe("empty");
     first.unmount();
     vi.advanceTimersByTime(LIMIT_MS);
-    expect(second.q("[data-status]").textContent).toContain("Time’s up");
+    expect(second.q(".calm-garden").dataset.state).toBe("timeout");
   });
 });
 
 describe("Calm Garden documentation", () => {
-  it("quotes the Submission note verbatim and records only the supplied AI decision", () => {
+  it("quotes the note accurately and records the actual v1 feedback without inventing v2 results", () => {
     const note = readFileSync("content/player-motivations.md", "utf8");
     const readme = readFileSync("src/minigames/calm-garden/README.md", "utf8");
     const quote = 'Rhythmic repetition, "the meditative patterns of Tetris" (Salen and Zimmerman 2003, ch. 24, "Patterns of Pleasure").';
     expect(note).toContain(quote);
     expect(readme).toContain(quote);
     for (const section of ["Mechanic", "Dynamic", "Aesthetic", "Sources"]) expect(readme).toContain(`## ${section}`);
-    expect(readme).toContain("two-second");
-    expect(readme).toContain("90-second");
-    expect(readme).toContain("1.5-second");
-    expect(readme).toContain("75-second");
+    expect(readme).toContain("35-second");
     expect(readme).toContain("hypotheses");
+    expect(readme).toContain("repetitive and boring");
     expect(readme).toContain("another player");
   });
 });

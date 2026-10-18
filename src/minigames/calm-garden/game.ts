@@ -1,55 +1,87 @@
+export const COLUMNS = 3;
 export const PLOT_COUNT = 12;
-export const ACTION_MS = 1500;
-export const LIMIT_MS = 75000;
+export const LIMIT_MS = 35000;
+export const FLOWER_TYPES = ["daisy", "poppy", "bellflower"] as const;
+export type FlowerType = typeof FLOWER_TYPES[number];
+export type GardenPlot =
+  | { readonly stage: "empty"; readonly flower: null }
+  | { readonly stage: "planted" | "bloomed"; readonly flower: FlowerType };
 
-/** Weeds, cleared soil, planted seeds, and a watered/completed plot. */
-export type PlotStage = 0 | 1 | 2 | 3;
 export interface GardenState {
-  plots: readonly PlotStage[];
+  plots: readonly GardenPlot[];
+  selectedFlower: FlowerType;
   timed: boolean;
   status: "ready" | "playing" | "complete" | "timeout";
   deadline: number | null;
-  active: { plot: number; endsAt: number } | null;
   endedAt: number | null;
+  lastAction: { kind: "plant" | "water"; plots: readonly number[] } | null;
 }
 
 export function createGarden(timed = false): GardenState {
   return {
-    plots: Array<PlotStage>(PLOT_COUNT).fill(0), timed, status: "ready",
-    deadline: null, active: null, endedAt: null,
+    plots: Array.from({ length: PLOT_COUNT }, () => ({ stage: "empty", flower: null })),
+    selectedFlower: "daisy", timed, status: "ready", deadline: null, endedAt: null, lastAction: null,
   };
 }
 
-/** All timestamps come from the caller's monotonic clock; no browser dependencies. */
+/** Timestamps come from the caller's monotonic clock; rules never schedule work. */
 export function startGarden(state: GardenState, now: number): GardenState {
   if (state.status !== "ready") return state;
   return { ...state, status: "playing", deadline: state.timed ? now + LIMIT_MS : null };
 }
 
+export function selectFlower(state: GardenState, flower: FlowerType): GardenState {
+  if ((state.status !== "ready" && state.status !== "playing") || !FLOWER_TYPES.includes(flower)
+    || state.selectedFlower === flower) return state;
+  return { ...state, selectedFlower: flower };
+}
+
 export function advanceGarden(state: GardenState, now: number): GardenState {
-  if (state.status !== "playing") return state;
-  let next = state;
-  const action = state.active;
-  // Resolve events chronologically, even after background-tab timer throttling.
-  // An action at the exact deadline is too late; earlier work still counts.
-  if (action && now >= action.endsAt && (state.deadline === null || action.endsAt < state.deadline)) {
-    const plots = state.plots.map((stage, plot) => plot === action.plot ? (stage + 1) as PlotStage : stage);
-    next = { ...state, plots, active: null };
-    if (plots.every(stage => stage === 3)) {
-      return { ...next, status: "complete", endedAt: action.endsAt };
-    }
-  }
-  if (next.deadline !== null && now >= next.deadline) {
-    return { ...next, status: "timeout", active: null, endedAt: next.deadline };
-  }
-  return next;
+  if (state.status !== "playing" || state.deadline === null || now < state.deadline) return state;
+  return { ...state, status: "timeout", endedAt: state.deadline };
+}
+
+function validPlot(plot: number): boolean {
+  return Number.isInteger(plot) && plot >= 0 && plot < PLOT_COUNT;
+}
+
+export function adjacentPlots(plot: number): number[] {
+  if (!validPlot(plot)) return [];
+  const neighbors: number[] = [];
+  if (plot >= COLUMNS) neighbors.push(plot - COLUMNS);
+  if (plot + COLUMNS < PLOT_COUNT) neighbors.push(plot + COLUMNS);
+  if (plot % COLUMNS > 0) neighbors.push(plot - 1);
+  if (plot % COLUMNS < COLUMNS - 1) neighbors.push(plot + 1);
+  return neighbors;
+}
+
+/** Take one snapshot of the direct neighbors: a ripple never recurses. */
+export function waterTargets(state: GardenState, plot: number): number[] {
+  if (!validPlot(plot) || state.plots[plot].stage !== "planted") return [];
+  return [plot, ...adjacentPlots(plot)].filter(index => state.plots[index].stage === "planted");
 }
 
 export function tendPlot(state: GardenState, plot: number, now: number): GardenState {
   const next = advanceGarden(state, now);
-  if (next.status !== "playing" || next.active !== null || !Number.isInteger(plot)
-    || plot < 0 || plot >= PLOT_COUNT || next.plots[plot] === 3) return next;
-  return { ...next, active: { plot, endsAt: now + ACTION_MS } };
+  if (next.status !== "playing" || !validPlot(plot) || next.plots[plot].stage === "bloomed") return next;
+  if (next.plots[plot].stage === "empty") {
+    return {
+      ...next,
+      plots: next.plots.map((p, index) => index === plot ? { stage: "planted", flower: next.selectedFlower } : p),
+      lastAction: { kind: "plant", plots: [plot] },
+    };
+  }
+  const targets = waterTargets(next, plot);
+  const plots = next.plots.map(p => p);
+  for (const index of targets) {
+    const flower = plots[index].flower!;
+    plots[index] = { stage: "bloomed", flower };
+  }
+  const complete = plots.every(p => p.stage === "bloomed");
+  return {
+    ...next, plots, lastAction: { kind: "water", plots: targets },
+    status: complete ? "complete" : "playing", endedAt: complete ? now : null,
+  };
 }
 
 export function remainingMs(state: GardenState, now: number): number | null {
