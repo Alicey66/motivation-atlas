@@ -20,4 +20,4 @@ TODO after the playtest: what they said they felt each way, in their words where
 
 From the Submission section of the course note: "Turn-based play, and a move counter in place of a clock (Lazzaro 2004b, sec. 1c)." With the counter off, the clock adds what the Challenge section lists instead: "Time pressure and opponent play (Hunicke et al. 2004, p. 3)."
 
-TODO: credit the coding agent you used, and name one of its suggestions you kept, changed, or rejected. The pebbles are Unicode shapes; the page layout follows the course's Pig minigame.
+Built with Claude Code (Anthropic). It suggested naming the toggle after the note's own mechanic, "Move counter in place of a clock," instead of a plain "Clock" checkbox. I kept it, so turning the toggle off reads as taking the Submission mechanic away. The pebbles are Unicode shapes; the layout follows the course's Pig minigame.
