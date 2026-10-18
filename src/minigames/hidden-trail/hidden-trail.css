@@ -5,7 +5,10 @@
 .hidden-trail-toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
 .hidden-trail-mode, .hidden-trail-legend { font-size: .85rem; color: var(--muted); }
 .hidden-trail-board { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.hidden-trail-cell { display: grid; place-items: center; aspect-ratio: 1; min-width: 0; border-radius: 6px; background: var(--bg); font: 600 1.1rem var(--mono); }
+.hidden-trail-cell { position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; border-radius: 6px; background: var(--bg); font: 600 1.1rem var(--mono); }
+.hidden-trail-cell.is-visited { background: var(--mech-soft); }
+.hidden-trail-cell.is-revisited { box-shadow: inset 0 0 0 1px var(--mech); }
+.hidden-trail-visit { position: absolute; bottom: 2px; right: 4px; color: var(--ink); font: 600 .65rem var(--mono); line-height: 1; }
 .hidden-trail-cell.is-hidden { color: var(--muted); border: 1px dashed var(--line); }
 .hidden-trail-cell.is-wall { background: var(--ink); color: var(--bg); }
 .hidden-trail-cell.is-player { background: var(--accent-soft); color: var(--ink); outline: 2px solid var(--accent); outline-offset: -2px; }

@@ -19,6 +19,7 @@ function mount(el: HTMLElement): () => void {
     h("label", { class: "hidden-trail-toggle" }, toggle, " Hide unexplored tiles"),
     mode, board,
     h("p", { class: "hidden-trail-legend" }, "@ You · B Beacon · E Exit · # Wall · ? Unexplored"),
+    h("p", { class: "hidden-trail-legend" }, "Small numbers count visits to a tile. Visible tiles without a number have been revealed but not visited. Restart clears the counts."),
     count, status, controls, reset,
     h("section", { class: "hidden-trail-reflect" },
       h("h4", {}, "Then check it against your own play"),
@@ -35,12 +36,14 @@ function mount(el: HTMLElement): () => void {
         const player = key(state.position) === key(position);
         const tile = BOARD[r][c];
         const collected = state.collected.includes(key(position));
+        const visits = visible ? state.visits[key(position)] ?? 0 : 0;
         const symbol = player ? "@" : !visible ? "?" : tile === "B" && collected ? "·" : tile === "S" || tile === "." ? "·" : tile;
         const description = player ? "you" : !visible ? "unexplored" : tile === "#" ? "wall" : tile === "B" ? collected ? "collected beacon" : "beacon" : tile === "E" ? "exit" : "path";
         cells.push(h("span", {
-          class: `hidden-trail-cell${player ? " is-player" : !visible ? " is-hidden" : tile === "#" ? " is-wall" : tile === "B" && !collected ? " is-beacon" : tile === "E" ? " is-exit" : ""}`,
-          "aria-label": `Row ${r + 1}, column ${c + 1}: ${description}`,
-        }, symbol));
+          class: `hidden-trail-cell${visits ? " is-visited" : ""}${visits > 1 ? " is-revisited" : ""}${player ? " is-player" : !visible ? " is-hidden" : tile === "#" ? " is-wall" : tile === "B" && !collected ? " is-beacon" : tile === "E" ? " is-exit" : ""}`,
+          "aria-label": `Row ${r + 1}, column ${c + 1}: ${description}${visits ? `, visited ${visits} ${visits === 1 ? "time" : "times"}` : ""}`,
+          "data-visits": visits || undefined,
+        }, h("span", { "aria-hidden": "true" }, symbol), visits ? h("small", { class: "hidden-trail-visit", "data-visit-count": "", "aria-hidden": "true" }, visits > 9 ? "9+" : String(visits)) : null));
       }
     }
     board.replaceChildren(...cells);

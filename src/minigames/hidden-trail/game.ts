@@ -12,6 +12,7 @@ export type Position = readonly [number, number];
 export interface TrailState {
   readonly position: Position;
   readonly seen: readonly string[];
+  readonly visits: Readonly<Record<string, number>>;
   readonly collected: readonly string[];
   readonly moves: number;
   readonly won: boolean;
@@ -36,7 +37,7 @@ function reveal(position: Position, seen: readonly string[]): string[] {
 
 export function newGame(): TrailState {
   const position: Position = [0, 0];
-  return { position, seen: reveal(position, []), collected: [], moves: 0, won: false };
+  return { position, seen: reveal(position, []), visits: { [key(position)]: 1 }, collected: [], moves: 0, won: false };
 }
 
 export function move(state: TrailState, direction: Direction): TrailState {
@@ -50,6 +51,7 @@ export function move(state: TrailState, direction: Direction): TrailState {
   return {
     position,
     seen: reveal(position, state.seen),
+    visits: { ...state.visits, [key(position)]: (state.visits[key(position)] ?? 0) + 1 },
     collected,
     moves: state.moves + 1,
     won: tile === "E" && collected.length === BEACONS,

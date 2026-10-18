@@ -19,6 +19,17 @@ function solution(): Direction[] {
 }
 
 describe("Hidden Trail rules", () => {
+  it("counts successful visits without changing earlier states or counting blocked moves", () => {
+    const start = newGame();
+    const down = move(start, "down");
+    const returned = move(down, "up");
+    expect(start.visits).toEqual({ "0,0": 1 });
+    expect(down.visits).toEqual({ "0,0": 1, "1,0": 1 });
+    expect(returned.visits).toEqual({ "0,0": 2, "1,0": 1 });
+    expect(move(down, "right")).toBe(down);
+    expect(move(down, "right").visits).toBe(down.visits);
+    expect(newGame().visits).toEqual({ "0,0": 1 });
+  });
   it("reveals neighboring tiles, while the visibility toggle preserves state", () => {
     const state = move(newGame(), "down");
     const before = JSON.stringify(state);
@@ -60,6 +71,28 @@ describe("Hidden Trail rules", () => {
 });
 
 describe("Hidden Trail controls", () => {
+  it("distinguishes visited paths from revealed neighbors and preserves visits when switching fog", () => {
+    const host = document.createElement("div");
+    const unmount = hiddenTrail.mount(host);
+    const down = host.querySelector('[data-direction="down"]') as HTMLButtonElement;
+    const up = host.querySelector('[data-direction="up"]') as HTMLButtonElement;
+    expect(host.querySelectorAll("[data-visits]")).toHaveLength(1);
+    expect(host.querySelectorAll(".is-hidden [data-visit-count]")).toHaveLength(0);
+    down.click(); up.click();
+    expect(host.querySelector('[aria-label^="Row 1, column 1:"]')!.getAttribute("aria-label")).toContain("visited 2 times");
+    expect(host.querySelectorAll("[data-visits]")).toHaveLength(2);
+    const counts = () => [...host.querySelectorAll("[data-visits]")].map(el => el.getAttribute("data-visits"));
+    const before = counts();
+    const toggle = host.querySelector("input")!;
+    toggle.checked = false; toggle.dispatchEvent(new Event("change"));
+    expect(counts()).toEqual(before);
+    toggle.checked = true; toggle.dispatchEvent(new Event("change"));
+    expect(counts()).toEqual(before);
+    (host.querySelector(".hidden-trail > button") as HTMLButtonElement).click();
+    expect(host.querySelectorAll("[data-visits]")).toHaveLength(1);
+    expect(host.querySelector("[data-visits]")!.getAttribute("data-visits")).toBe("1");
+    unmount();
+  });
   it("hides undiscovered content from accessible labels and switches without moving", () => {
     const host = document.createElement("div");
     const unmount = hiddenTrail.mount(host);
