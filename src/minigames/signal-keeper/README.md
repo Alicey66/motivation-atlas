@@ -16,11 +16,12 @@ Restart resets everything; change modes between rounds.
 
 ## Dynamic
 
-One other player scored 6/10 with adaptation on, then 10/10 with it off.
+One other player tested both adaptive versions: 6/10 with the earlier 12%
+minimum and 5/10 with the current 3% minimum. With adaptation off, they
+scored 10/10.
 They reported wanting to keep going or replay for a better score after
 misses widened the target. In fixed mode, they described simply pressing
-the button ten times. The playtest used the earlier 12% minimum; the
-current 3% minimum has not yet been playtested.
+the button ten times.
 
 ## Aesthetic
 
