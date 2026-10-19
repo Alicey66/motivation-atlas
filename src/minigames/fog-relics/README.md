@@ -1,4 +1,4 @@
-# Fogbound
+# Fog Relics
 
 Motivator: Discovery. Author: Hanxuan1003.
 
@@ -16,4 +16,4 @@ The player described the game as simple but said fog made them want to discover 
 
 ## Sources
 
-The course note's Discovery mechanics include “Secrets to find and areas to explore completely” (Koster 2013, p. 76). Fogbound applies this through hidden relics and persistent exploration. Codex assisted implementation and tests. The implementation keeps its suggestion to isolate visibility while holding other rules constant. Adapted from the Atlas template; no external art, audio, or additional libraries were used.
+The course note's Discovery mechanics include “Secrets to find and areas to explore completely” (Koster 2013, p. 76). Fog Relics applies this through hidden relics and persistent exploration. Codex assisted implementation and tests. The implementation keeps its suggestion to isolate visibility while holding other rules constant. Adapted from the Atlas template; no external art, audio, or additional libraries were used.

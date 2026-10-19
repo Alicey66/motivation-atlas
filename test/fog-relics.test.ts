@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { MAPS, LIMIT, move, newGame, visible, type Direction } from '../src/minigames/fogbound/game';
-import { fogbound } from '../src/minigames/fogbound';
+import { MAPS, LIMIT, move, newGame, visible, type Direction } from '../src/minigames/fog-relics/game';
+import { fogRelics } from '../src/minigames/fog-relics';
 
-describe('Fogbound', () => {
+describe('Fog Relics', () => {
   it('changes only visibility: hidden tiles are revealed progressively and retained', () => {
     const state = newGame();
     expect(visible(state, 0, true)).toBe(false);
@@ -44,7 +44,7 @@ describe('Fogbound', () => {
     s = move(move(s,'right'),'left'); expect(s.collected).toEqual([0]);
   });
   it('does not leak hidden contents in accessible labels and toggles without resetting progress', () => {
-    const el = document.createElement('div'); document.body.append(el); const clean = fogbound.mount(el);
+    const el = document.createElement('div'); document.body.append(el); const clean = fogRelics.mount(el);
     expect(el.querySelectorAll('.fb-relic').length).toBe(0);
     const toggle = el.querySelector('input')!;
     toggle.click(); expect(el.querySelectorAll('.fb-relic').length).toBe(3);

@@ -32,8 +32,8 @@ function mount(el: HTMLElement): () => void {
   const next = h('button', { type: 'button' }, 'Try other map');
   next.addEventListener('click', () => { state = newGame(1 - state.map); changed = false; render(); });
   toggle.addEventListener('change', () => { fog = toggle.checked; if (state.steps > 0) changed = true; render(); });
-  const root = h('section', { class: 'fogbound', 'aria-label': 'Fogbound discovery game' },
-    h('div', { class: 'fb-heading' }, h('span', { class: 'tag' }, 'A small expedition / Discovery'), h('h3', {}, 'Fogbound'), h('p', {}, 'Find three relics. Bring them home. What lies beyond your lantern?')),
+  const root = h('section', { class: 'fog-relics', 'aria-label': 'Fog Relics discovery game' },
+    h('div', { class: 'fb-heading' }, h('span', { class: 'tag' }, 'A small expedition / Discovery'), h('p', {}, 'Find three relics. Bring them home. What lies beyond your lantern?')),
     h('label', { class: 'fb-toggle' }, toggle, ' Exploration fog'),
     h('p', { class: 'fb-hint' }, 'On: discover nearby tiles as you move. Off: see the whole map. Only visibility changes.'),
     stats, board, h('p', { class: 'fb-legend' }, '● You   ⌂ Home   ◇ Relic   ▧ Rock   ? Unknown'), message, controls,
@@ -68,4 +68,4 @@ function mount(el: HTMLElement): () => void {
   render(); el.append(root);
   return () => { root.removeEventListener('keydown', onKey); root.remove(); };
 }
-export const fogbound: Minigame = { slug: 'fogbound', title: 'Fogbound', motivators: ['discovery'], author: 'Hanxuan1003', mount };
+export const fogRelics: Minigame = { slug: 'fog-relics', title: 'Fog Relics', motivators: ['discovery'], author: 'Hanxuan1003', mount };
