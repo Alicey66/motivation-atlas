@@ -206,7 +206,7 @@ describe("music and lifecycle",()=>{
   }
   function mountTouch(){
     const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host),root=host.querySelector<HTMLElement>(".eb")!;
-    host.querySelector<HTMLButtonElement>("[data-start]")!.click();root.classList.add("is-touch-cockpit");
+    host.querySelector<HTMLButtonElement>("[data-start]")!.click();root.classList.add("has-touch-controls");
     const move=host.querySelector<HTMLButtonElement>("[data-touch-move]")!,aim=host.querySelector<HTMLButtonElement>("[data-touch-aim]")!;
     for(const pad of[move,aim])vi.spyOn(pad,"getBoundingClientRect").mockReturnValue({x:0,y:0,left:0,top:0,right:100,bottom:100,width:100,height:100,toJSON:()=>({})});
     return{host,root,move,aim,dispose:()=>{unmount();host.remove();}};
@@ -244,18 +244,55 @@ describe("music and lifecycle",()=>{
       expect(touch.move.classList.contains("is-active")).toBe(false);expect(touch.aim.classList.contains("is-active")).toBe(false);
     }finally{touch.dispose();expect(vi.getTimerCount()).toBe(0);vi.useRealTimers();}
   });
-  it("uses F for fog while Space fires even when the fog switch has focus",()=>{
+  it("keeps Space native on controls while F remains the fog shortcut",()=>{
     vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host);
     const root=host.querySelector<HTMLElement>(".eb")!,fog=host.querySelector<HTMLInputElement>("[data-mechanic]")!;
     const press=(key:string,repeat=false)=>{const event=new KeyboardEvent("keydown",{key,repeat,bubbles:true,cancelable:true});fog.dispatchEvent(event);return event;};
     try{
       host.querySelector<HTMLButtonElement>("[data-start]")!.click();fog.focus();
-      const ammo=Number(host.querySelector("[data-ammo]")!.textContent);expect(press(" ").defaultPrevented).toBe(true);vi.advanceTimersByTime(500);window.dispatchEvent(new KeyboardEvent("keyup",{key:" "}));
-      expect(root.dataset.fog).toBe("true");expect(fog.checked).toBe(true);expect(Number(host.querySelector("[data-ammo]")!.textContent)).toBeLessThan(ammo);
+      const lastShot=root.dataset.lastFired;expect(press(" ").defaultPrevented).toBe(false);vi.advanceTimersByTime(500);window.dispatchEvent(new KeyboardEvent("keyup",{key:" "}));
+      expect(root.dataset.fog).toBe("true");expect(fog.checked).toBe(true);expect(root.dataset.lastFired).toBe(lastShot);
+      for(const selector of["[data-pause]","[data-sound]","[data-restart]","[data-fire]"]){
+        const event=new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true});host.querySelector(selector)!.dispatchEvent(event);expect(event.defaultPrevented).toBe(false);
+      }
       expect(press("f").defaultPrevented).toBe(true);expect(root.dataset.fog).toBe("false");expect(fog.checked).toBe(false);
       press("f",true);expect(root.dataset.fog).toBe("false");press("F");expect(root.dataset.fog).toBe("true");
       press("Escape");expect(root.dataset.phase).toBe("paused");const pausedAt=root.dataset.time;press("f");vi.advanceTimersByTime(500);expect(root.dataset.fog).toBe("false");expect(root.dataset.phase).toBe("paused");expect(root.dataset.time).toBe(pausedAt);
     }finally{unmount();host.remove();expect(vi.getTimerCount()).toBe(0);vi.useRealTimers();}
+  });
+  it("stops held keyboard fire when focus moves from the viewport to a control",()=>{
+    vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host);
+    try{
+      host.querySelector<HTMLButtonElement>("[data-start]")!.click();const root=host.querySelector<HTMLElement>(".eb")!,board=host.querySelector<HTMLElement>("[data-board]")!;
+      board.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));vi.advanceTimersByTime(350);
+      expect(Number(root.dataset.lastFired)).toBeGreaterThan(0);host.querySelector<HTMLInputElement>("[data-mechanic]")!.focus();const lastShot=root.dataset.lastFired;
+      vi.advanceTimersByTime(500);expect(root.dataset.lastFired).toBe(lastShot);
+    }finally{unmount();host.remove();expect(vi.getTimerCount()).toBe(0);vi.useRealTimers();}
+  });
+  it("does not create an audio context during play before sound is explicitly enabled",()=>{
+    vi.useFakeTimers();const constructor=vi.fn(function(){throw new Error("Audio hardware unavailable in this unit test");});vi.stubGlobal("AudioContext",constructor);
+    const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host);
+    try{
+      const root=host.querySelector<HTMLElement>(".eb")!,board=host.querySelector<HTMLElement>("[data-board]")!;
+      host.querySelector<HTMLButtonElement>("[data-start]")!.click();pointer(board,"pointerdown",11,20,20);
+      board.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));vi.advanceTimersByTime(500);
+      expect(root.dataset.audioEnabled).toBe("false");expect(constructor).not.toHaveBeenCalled();
+      host.querySelector<HTMLButtonElement>("[data-sound]")!.click();expect(root.dataset.audioEnabled).toBe("true");expect(constructor).toHaveBeenCalledTimes(1);
+    }finally{unmount();host.remove();expect(vi.getTimerCount()).toBe(0);vi.unstubAllGlobals();vi.useRealTimers();}
+  });
+  it("starts embedded on phones and enlarges only after an explicit request, with exit and cleanup",()=>{
+    vi.useFakeTimers();const query={matches:true,addEventListener:vi.fn(),removeEventListener:vi.fn()};vi.stubGlobal("matchMedia",()=>query);
+    const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host);
+    try{
+      const root=host.querySelector<HTMLElement>(".eb")!,launch=host.querySelector<HTMLButtonElement>("[data-touch-launch]")!;
+      host.querySelector<HTMLButtonElement>("[data-start]")!.click();expect(root.classList.contains("has-touch-controls")).toBe(true);expect(root.classList.contains("is-touch-cockpit")).toBe(false);
+      launch.click();expect(root.classList.contains("is-touch-cockpit")).toBe(true);expect(launch.getAttribute("aria-expanded")).toBe("true");
+      host.querySelector<HTMLButtonElement>("[data-touch-exit]")!.click();expect(root.classList.contains("is-touch-cockpit")).toBe(false);expect(root.dataset.phase).toBe("paused");expect(document.activeElement).toBe(launch);
+      host.querySelector<HTMLButtonElement>("[data-start]")!.click();expect(root.dataset.phase).toBe("playing");expect(root.classList.contains("is-touch-cockpit")).toBe(false);
+      launch.click();unmount();expect(host.childElementCount).toBe(0);expect(query.removeEventListener).toHaveBeenCalledWith("change",expect.any(Function));
+      // jsdom queues zero-delay selection notifications when focus changes.
+      vi.advanceTimersByTime(0);expect(vi.getTimerCount()).toBe(0);
+    }finally{unmount();host.remove();vi.unstubAllGlobals();vi.useRealTimers();}
   });
   it("selects battle music from autonomous enemy awareness and contains different scores",()=>{
     const state=run(sandbox(),.2);expect(musicFor(state)).toBe("battle");expect(musicFor(run(sandbox("leviathan"),.2))).toBe("boss");
@@ -265,7 +302,7 @@ describe("music and lifecycle",()=>{
     vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host);
     host.querySelector<HTMLButtonElement>("[data-start]")!.click();expect(host.querySelector<HTMLElement>(".eb")!.dataset.phase).toBe("playing");
     host.querySelector<HTMLButtonElement>("[data-pause]")!.click();expect(host.querySelector<HTMLElement>(".eb")!.dataset.phase).toBe("paused");
-    unmount();expect(host.childElementCount).toBe(0);expect(vi.getTimerCount()).toBe(0);host.remove();vi.useRealTimers();
+    unmount();expect(host.childElementCount).toBe(0);vi.advanceTimersByTime(0);expect(vi.getTimerCount()).toBe(0);host.remove();vi.useRealTimers();
   });
   it("holds Space to fire, reserves Escape for pause, and clears held fire when paused",()=>{
     vi.useFakeTimers();const host=document.createElement("div");document.body.append(host);const unmount=echoesBelow.mount(host);

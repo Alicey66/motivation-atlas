@@ -14,22 +14,22 @@ function mount(host: HTMLElement): () => void {
   let dive = newDive(), chartId = 0;
   const root = h("section", { class: "eb", lang: "en", "aria-label": "Echoes Below: Abyssal Expedition" });
   const touchLayout = window.matchMedia?.("(any-pointer: coarse) and (max-width: 1100px)");
-  const soundButton = h("button", { class: "eb-button eb-sound", type: "button", "data-sound": "", "aria-pressed": "true" }, "♫ Enable sound");
+  const soundButton = h("button", { class: "eb-button eb-sound", type: "button", "data-sound": "", "aria-pressed": "false" }, "♫ Enable sound");
   const track = h("span", { "data-track": "" }, TRACK_NAMES.explore);
-  const musicLabel = h("span", { class: "eb-music-state" }, "Start a dive to enable sound");
-  let audioRunning = false, audioEnabled = true;
+  const musicLabel = h("span", { class: "eb-music-state" }, "Sound is off. Enable it when ready.");
+  let audioRunning = false, audioEnabled = false;
   const audio = createAudio((status) => {
     audioRunning = status.running; audioEnabled = status.enabled;
-    root.dataset.audioRunning = String(status.running); root.dataset.audioScheduled = String(status.scheduled); root.dataset.music = status.scene;
-    soundButton.textContent = !status.available ? "♫ Sound unavailable" : !status.enabled ? "♫ Sound off" : status.running ? "♫ Sound on" : dive.phase==="paused" ? "♫ Sound paused" : "♫ Enable sound";
+    root.dataset.audioEnabled = String(status.enabled); root.dataset.audioRunning = String(status.running); root.dataset.audioScheduled = String(status.scheduled); root.dataset.music = status.scene;
+    soundButton.textContent = !status.available ? "♫ Sound unavailable" : !status.enabled ? "♫ Enable sound" : dive.phase==="paused" ? "♫ Sound paused" : status.running ? "♫ Sound on" : "♫ Retry sound";
     soundButton.setAttribute("aria-pressed", String(status.enabled));
-    musicLabel.textContent = !status.enabled ? "Muted" : status.running ? "Playing" : dive.phase==="paused" ? "Paused with dive" : "Start a dive to enable sound";
+    musicLabel.textContent = !status.enabled ? "Sound is off. Enable it when ready." : status.running ? "Playing" : dive.phase==="paused" ? "Paused with dive" : "Enable sound to start playback";
     root.classList.toggle("is-playing", status.enabled && status.running);
   });
   const coordinate = h("span", { class: "eb-coordinates", "data-coordinate": "" });
   const region = h("span", { class: "eb-region" });
   const mode = h("span", { class: "eb-view-label" });
-  const board = h("div", { class: "eb-board", tabindex: 0, role: "group", "aria-label": "Move with arrows or WASD. Point the mouse to turn the bow. Hold Space to fire forward. Q scans, R repairs, Esc pauses.", "data-board": "" });
+  const board = h("div", { id: `${uid}-board`, class: "eb-board", tabindex: 0, role: "group", "aria-label": "Move with arrows or WASD. Point the mouse to turn the bow. Hold Space to fire forward. Q scans, R repairs, F toggles fog, Esc pauses.", "data-board": "" });
   const ocean = s("svg", { class: "eb-ocean", role: "img", "aria-label": "Underwater viewport following the submarine" });
   const targetLabel = h("span", { "data-target": "" });
   const bossName = h("span", {}, "LEVIATHAN"), bossHealth = h("b", {"data-boss-health":""});
@@ -46,7 +46,7 @@ function mount(host: HTMLElement): () => void {
   const signalText = h("span", { "data-signal": "" });
   const beaconRows = [0, 1, 2].map((i) => h("li", {}, h("span", { class: "eb-number" }, `0${i + 1}`), h("span", {}, ["Glimmer", "Tide", "Far Shore"][i]), h("span", {})));
   const minimap = s("svg", { class: "eb-minimap", role: "img", "aria-label": "Sea chart. The gold marker shows your submarine." });
-  const fog = h("input", { type: "checkbox", checked: true, id: `${uid}-fog`, "data-mechanic": "fog-of-war", "aria-keyshortcuts":"F", title:"Toggle chart fog (F). Space fires missiles." });
+  const fog = h("input", { type: "checkbox", checked: true, id: `${uid}-fog`, "data-mechanic": "fog-of-war", "aria-keyshortcuts":"F", title:"Toggle chart fog with F, or Space when this switch has focus." });
   const fogCopy = h("span", { class: "eb-fog-copy" });
   const log = h("ol", { class: "eb-log", "aria-label": "Discovery log" });
   const fireButton = h("button", { class: "eb-action eb-fire", type: "button", "data-fire": "" }, h("span", {}, "⌁"), h("span", {}, "Fire missiles", h("small", {}, "Hold Space / Forward fire")));
@@ -73,7 +73,7 @@ function mount(host: HTMLElement): () => void {
   const touchExit = h("button", { type: "button", "data-touch-exit": "", "aria-label": "Pause and return to page" }, "Notes ↗");
   const touchToolbar = h("div", { class: "eb-touch-toolbar", "aria-label": "Dive actions" }, touchPulse, touchRepair, touchFog, touchPause, touchSound, touchExit);
   const touchStatus = h("div", { class: "eb-touch-status" }, h("strong", { "data-touch-beacons": "" }), h("span", { "data-touch-signal": "" }));
-  const touchLaunch = h("button", { type: "button", class: "eb-button eb-touch-launch", "data-touch-launch": "" }, "Open touch cockpit ↗");
+  const touchLaunch = h("button", { type: "button", class: "eb-button eb-touch-launch", "data-touch-launch": "", "aria-expanded": "false", "aria-controls": board.id }, "Expand touch controls ↗");
   for (const [direction, arrow, label] of [["up", "↑", "Move north"], ["left", "←", "Move west"], ["down", "↓", "Move south"], ["right", "→", "Move east"]] as const) {
     const button = h("button", { class: `eb-direction eb-${direction}`, type: "button", "data-direction": direction, "aria-label": label }, arrow);
     bindDirection(button, direction); dpad.append(button);
@@ -81,7 +81,7 @@ function mount(host: HTMLElement): () => void {
   const toastTitle = h("strong", {"data-loot-title":""});
   const toastDetail = h("span", {"data-loot-detail":""});
   const toast = h("div", {class:"eb-loot-toast",hidden:true,"data-loot-toast":"",role:"status","aria-live":"polite"}, h("i",{"aria-hidden":"true"},"✦"),toastTitle,toastDetail);
-  const startTitle = h("h3", {}, "The sea will not wait.");
+  const startTitle = h("h5", {}, "The sea will not wait.");
   const startCopy = h("p", {}, "Move continuously. Space fires; Esc pauses. Gather upgrades before entering the abyss.");
   const startButton = h("button", {type:"button",class:"eb-button eb-start","data-start":""}, "Start dive →");
   const overlay = h("div",{class:"eb-start-overlay","data-start-overlay":""},h("span",{class:"eb-eyebrow"},"REALTIME EXPEDITION"),startTitle,startCopy,startButton);
@@ -104,7 +104,7 @@ function mount(host: HTMLElement): () => void {
   const evolutionPanel=h("div",{class:"eb-evolution"},h("span",{class:"eb-evolution-mark","aria-hidden":"true"},"◈"),vesselName,h("div",{class:"eb-evolution-track"},evolutionFill),evolutionCopy);
   root.append(
     h("div", { class: "eb-masthead" }, h("span", { class: "eb-brand" }, h("i", {}, "◉"), " ABYSSAL / DEEP SEA OBSERVATORY"), h("div", { class: "eb-masthead-right" }, h("span", { class: "eb-version" }, "ABYSS V.1"), soundButton)),
-    h("header", { class: "eb-heading" }, h("div", {}, h("p", { class: "eb-eyebrow" }, "WHERE THE LIGHT ENDS, THE EXPEDITION BEGINS"), h("h2", {}, "Echoes Below", h("em", {}, "Abyssal Expedition")), h("p", { class: "eb-subtitle" }, "Explore sunken ruins. Evolve your vessel. Face what waits below.")), h("div", { class: "eb-depth" }, "2,840", h("small", {}, "METERS BELOW THE SURFACE"))),
+    h("header", { class: "eb-heading" }, h("div", {}, h("p", { class: "eb-eyebrow" }, "WHERE THE LIGHT ENDS, THE EXPEDITION BEGINS"), h("h4", {class:"eb-title"}, "Echoes Below", h("em", {}, "Abyssal Expedition")), h("p", { class: "eb-subtitle" }, "Explore sunken ruins. Evolve your vessel. Face what waits below.")), h("div", { class: "eb-depth" }, "2,840", h("small", {}, "METERS BELOW THE SURFACE"))),
     touchLaunch,
     h("div", { class: "eb-layout" },
       h("div", { class: "eb-main" }, hud, evolutionPanel, touchToolbar, board,
@@ -112,7 +112,7 @@ function mount(host: HTMLElement): () => void {
         touchControls, touchStatus,
         h("div", { class: "eb-controls" }, h("div", { class: "eb-combat-controls" }, fireButton, pulseButton, repairButton, pauseButton), dpad)),
       h("aside", { class: "eb-sidebar", "aria-label": "Expedition instruments" },
-        h("section", { class: "eb-mission" }, h("p", { class: "eb-eyebrow" }, "01 / THE SIGNALS"), h("div", { class: "eb-section-title" }, h("h3", {}, "Restore the network"), beaconValue), h("ul", { class: "eb-beacons" }, ...beaconRows), h("p", { class: "eb-goal" }, "Restore all three beacons and defeat the Leviathan.")),
+        h("section", { class: "eb-mission" }, h("p", { class: "eb-eyebrow" }, "01 / THE SIGNALS"), h("div", { class: "eb-section-title" }, h("h5", {}, "Restore the network"), beaconValue), h("ul", { class: "eb-beacons" }, ...beaconRows), h("p", { class: "eb-goal" }, "Restore all three beacons and defeat the Leviathan.")),
         h("section", { class: "eb-map-section" }, h("div", { class: "eb-section-title" }, h("p", { class: "eb-eyebrow" }, "02 / CHARTED WATERS"), charted), minimap, h("p", { class: "eb-sonar-reading" }, h("span", {}, "◌ Nearest objective"), signalText)),
         h("section", { class: "eb-music-panel" }, h("div", { class: "eb-music-bars", "aria-hidden": "true" }, ...[1, 2, 3, 4, 5].map((i) => h("i", { style: `--i:${i}` }))), h("div", {}, h("p", { class: "eb-eyebrow" }, "DYNAMIC SCORE"), track, musicLabel)),
         h("section", { class: "eb-fog-panel" }, h("label", { for: fog.id, class: "eb-fog-label" }, h("span", {}, "Chart fog · F"), h("span", { class: "eb-switch" }, fog, h("i", { "aria-hidden": "true" }))), fogCopy)),
@@ -142,13 +142,17 @@ function mount(host: HTMLElement): () => void {
   const requestFrame=(callback:FrameRequestCallback):number=>typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(callback):window.setTimeout(()=>callback(performance.now()),16);
   const cancelFrame=(handle:number):void=>{if(typeof window.cancelAnimationFrame==="function")window.cancelAnimationFrame(handle);else window.clearTimeout(handle);};
 
-  function setCockpit(active:boolean):void {clearControls();root.classList.toggle("is-touch-cockpit",active&&!!touchLayout?.matches);}
+  function setCockpit(active:boolean):void {
+    const wasExpanded=root.classList.contains("is-touch-cockpit"),expanded=active&&!!touchLayout?.matches;
+    clearControls();root.classList.toggle("is-touch-cockpit",expanded);touchLaunch.setAttribute("aria-expanded",String(expanded));
+    if(expanded)touchExit.focus({preventScroll:true});else if(wasExpanded)touchLaunch.focus({preventScroll:true});
+  }
   function configureTouch():void {root.classList.toggle("has-touch-controls",!!touchLayout?.matches);if(!touchLayout?.matches)setCockpit(false);renderHud();}
-  function begin():void { if(dive.phase==="ready"){if(touchLayout?.matches&&!root.classList.contains("is-touch-cockpit"))setCockpit(true);dive=start(dive);lastFrame=performance.now();accumulator=0;void audio.unlock();renderHud();} }
+  function begin():void { if(dive.phase==="ready"){dive=start(dive);lastFrame=performance.now();accumulator=0;renderHud();} }
   function clearControls():void {movementStick?.reset();aimingStick?.reset();touchMove={x:0,y:0};touchAim=null;touchFire=false;heldKeys.clear();pointerDirections.clear();tapDirection=null;tapUntil=0;fireHeld=false;firePointer=null;fireTapUntil=0;aimCursor=null;navigation=[];goal=null;}
   function pause():void {
-    const previous=dive.phase;dive=togglePause(dive);clearControls();accumulator=0;lastFrame=performance.now();
-    audio.setPaused(dive.phase==="paused");if(previous==="ready"||dive.phase==="playing")void audio.unlock();renderHud();
+    dive=togglePause(dive);clearControls();accumulator=0;lastFrame=performance.now();
+    audio.setPaused(dive.phase==="paused");renderHud();
   }
   function act(action:(state:Dive)=>Dive):void {begin();dive=action(dive);renderHud();}
   function bindDirection(button:HTMLButtonElement,direction:Direction):void {
@@ -201,16 +205,16 @@ function mount(host: HTMLElement): () => void {
     touchPulse.textContent=dive.time<dive.pulseReady?`Scan ${Math.ceil(dive.pulseReady-dive.time)}s`:"Scan";touchRepair.textContent=`Fix ${dive.kits}`;
     touchPulse.disabled=dive.phase!=="playing"||dive.time<dive.pulseReady;touchRepair.disabled=dive.phase!=="playing"||dive.kits<=0||dive.hp>=dive.maxHp||dive.time<dive.repairReady;touchPause.disabled=finished(dive);
     touchPause.textContent=dive.phase==="paused"?"Resume":"Pause";touchFog.textContent=dive.fog?"Fog on":"Fog off";touchFog.setAttribute("aria-pressed",String(dive.fog));
-    touchSound.setAttribute("aria-pressed",String(audioEnabled));touchSound.textContent=audioEnabled?"Sound":"Muted";
+    touchSound.setAttribute("aria-pressed",String(audioEnabled));touchSound.textContent=audioEnabled?"Sound on":"Sound off";
     touchStatus.firstElementChild!.textContent=`BEACONS ${dive.restored.size} / 3`;touchStatus.lastElementChild!.textContent=signalText.textContent;
     beaconRows.forEach((row,i)=>{const b=dive.chart.beacons[i],done=dive.restored.has(key(b));row.classList.toggle("is-done",done);row.lastElementChild!.textContent=done?"Online ✓":visible(dive,b)?coordinateOf(b):"Undiscovered";});
-    fog.checked=dive.fog;fogCopy.textContent=dive.fog?"On: discover the sea gradually. Turn it off to compare your route and experience.":"Off: the full chart is visible. Enemy AI, combat, and loot rules are unchanged.";
+    fog.checked=dive.fog;fogCopy.textContent=dive.fog?"Fog on: search for hidden beacons, enemies, and upgrades. Turn fog off to compare how you explore.":"Fog off: plan your route with the full chart visible. Enemy AI, combat, and loot rules stay the same.";
     const boss=dive.enemies.find(e=>e.kind==="leviathan");bossBar.hidden=!boss||boss.hp<=0||!visible(dive,boss)||distance(boss,dive.position)>9;bossFill.style.width=`${boss?boss.hp/boss.maxHp*100:0}%`;
     if(boss){const stage=leviathanStage(boss);bossName.textContent=`Leviathan · ${["Awakening","Hunt","Fury"][stage-1]} / 0${stage}`;bossHealth.textContent=`${Math.ceil(boss.hp)} / ${boss.maxHp}`;bossMeter.setAttribute("aria-valuenow",String(Math.ceil(boss.hp)));bossMeter.setAttribute("aria-valuemax",String(boss.maxHp));bossBar.dataset.stage=String(stage);}
     overlay.hidden=dive.phase!=="ready"&&dive.phase!=="paused";startTitle.textContent=dive.phase==="paused"?"Dive paused.":"Enter with caution.";startCopy.textContent=dive.phase==="paused"?"The world is paused. Resume when ready.":touchLayout?.matches?"Left thumb: drag to move. Right thumb: hold and drag to aim and fire. Lift to stop shooting. Scan, repair, and pause above.":"WASD to move. Point to turn the bow; hold Space to fire forward. Aim manually, dodge, and watch your supplies. Esc pauses.";startButton.textContent=dive.phase==="paused"?"Resume dive →":"Start dive →";
     if(root.dataset.log!==dive.log.join("|")){root.dataset.log=dive.log.join("|");log.replaceChildren(...dive.log.slice(-3).reverse().map(text=>h("li",{},h("span",{},"◈"),text)));}
     reflection.hidden=!finished(dive);
-    if(finished(dive)&&!reflection.childNodes.length)reflection.replaceChildren(h("p",{class:"eb-eyebrow"},complete(dive)?"EXPEDITION COMPLETE":"EMERGENCY RECOVERY"),h("h3",{},complete(dive)?"The deep echoes again.":"Recovered. Next time, go farther."),h("p",{},"What did you choose, and how did it feel? Switch chart fog on or off and dive again. Did it change your route or experience?"));
+    if(finished(dive)&&!reflection.childNodes.length)reflection.replaceChildren(h("p",{class:"eb-eyebrow"},complete(dive)?"EXPEDITION COMPLETE":"EMERGENCY RECOVERY"),h("h5",{},complete(dive)?"The deep echoes again.":"Recovered. Next time, go farther."),h("p",{},"What did you choose, and how did it feel? Switch chart fog on or off and dive again. Did it change your route or experience?"));
     if(finished(dive)&&!reflection.querySelector(".eb-touch-result-actions")){
       clearControls();const retry=h("button",{type:"button",class:"eb-button"},"Dive again"),notes=h("button",{type:"button",class:"eb-button"},"Read notes");
       retry.addEventListener("click",()=>{reset(false);begin();});notes.addEventListener("click",()=>setCockpit(false));reflection.append(h("div",{class:"eb-touch-result-actions"},retry,notes));
@@ -251,22 +255,24 @@ function mount(host: HTMLElement): () => void {
     frameId=requestFrame(frame);
   }
   fireButton.addEventListener("pointerdown",event=>{event.preventDefault();begin();fireHeld=true;firePointer=event.pointerId;fireTapUntil=performance.now()+180;try{fireButton.setPointerCapture(event.pointerId);}catch{/* synthetic input */}});
-  movementStick=bindTouchStick(movePad,moveThumb,{enabled:()=>dive.phase==="playing"&&root.classList.contains("is-touch-cockpit"),start:()=>{aimCursor=null;navigation=[];goal=null;},move:vector=>{touchMove=vector;},end:()=>{touchMove={x:0,y:0};}});
-  aimingStick=bindTouchStick(aimPad,aimThumb,{enabled:()=>dive.phase==="playing"&&root.classList.contains("is-touch-cockpit"),start:()=>{aimCursor=null;touchAim=dive.angle;touchFire=true;},move:vector=>{if(Math.hypot(vector.x,vector.y)>.02)touchAim=Math.atan2(vector.y,vector.x);},end:()=>{touchFire=false;touchAim=null;}});
+  const canUseSticks=()=>dive.phase==="playing"&&(root.classList.contains("has-touch-controls")||root.classList.contains("is-touch-cockpit"));
+  movementStick=bindTouchStick(movePad,moveThumb,{enabled:canUseSticks,start:()=>{aimCursor=null;navigation=[];goal=null;},move:vector=>{touchMove=vector;},end:()=>{touchMove={x:0,y:0};}});
+  aimingStick=bindTouchStick(aimPad,aimThumb,{enabled:canUseSticks,start:()=>{aimCursor=null;touchAim=dive.angle;touchFire=true;},move:vector=>{if(Math.hypot(vector.x,vector.y)>.02)touchAim=Math.atan2(vector.y,vector.x);},end:()=>{touchFire=false;touchAim=null;}});
   touchLaunch.addEventListener("click",()=>{setCockpit(true);renderHud();});
   touchExit.addEventListener("click",()=>{if(dive.phase==="playing")pause();setCockpit(false);});
   touchPulse.addEventListener("click",()=>act(pulse));touchRepair.addEventListener("click",()=>act(repair));touchPause.addEventListener("click",pause);
   touchFog.addEventListener("click",()=>{dive=setFog(dive,!dive.fog);renderHud();});touchSound.addEventListener("click",()=>soundButton.click());
   touchControls.addEventListener("contextmenu",event=>event.preventDefault());
   fireButton.addEventListener("click",event=>{if(event.detail===0){begin();dive=fire(dive);renderHud();}});
-  pulseButton.addEventListener("click",()=>act(pulse));repairButton.addEventListener("click",()=>act(repair));pauseButton.addEventListener("click",pause);startButton.addEventListener("click",()=>dive.phase==="paused"?pause():begin());
+  pulseButton.addEventListener("click",()=>act(pulse));repairButton.addEventListener("click",()=>act(repair));pauseButton.addEventListener("click",pause);startButton.addEventListener("click",()=>{if(dive.phase==="paused")pause();else begin();if(!touchLayout?.matches)board.focus({preventScroll:true});});
   fog.addEventListener("change",()=>{dive=setFog(dive,fog.checked);renderHud();});
   soundButton.addEventListener("click",()=>{if(!audioRunning&&audioEnabled&&dive.phase!=="paused")void audio.unlock();else audio.toggle();});
-  root.addEventListener("pointerdown",event=>{if(!soundButton.contains(event.target as Node)&&dive.phase!=="paused")void audio.unlock();});
+  root.addEventListener("focusin",event=>{if(event.target!==board){heldKeys.delete(" ");fireTapUntil=0;}});
   function reset(nextChart:boolean):void {if(nextChart)chartId=(chartId+1)%3;clearControls();enemyAudioMemo.clear();dive=newDive(chartFor(chartId),dive.fog);scene=createScene(ocean,dive,uid);audio.setPaused(false);lastFrame=performance.now();accumulator=0;lastToast=-1;lastPlayerFired=-99;lastHurt=-99;reflection.replaceChildren();toastAnimation?.cancel();toast.hidden=true;renderHud();drawMinimap(minimap,dive,viewportWidth(ocean),viewportHeight(ocean));}
   restart.addEventListener("click",()=>reset(false));next.addEventListener("click",()=>reset(true));
   board.addEventListener("pointermove",event=>{if(event.pointerType!=="mouse"||dive.phase!=="playing"||(event.target as Element).closest(".eb-start-overlay"))return;const b=ocean.getBoundingClientRect();if(b.width&&b.height)aimCursor={x:(event.clientX-b.left)/b.width,y:(event.clientY-b.top)/b.height};});
   board.addEventListener("pointerleave",()=>{aimCursor=null;});
+  board.addEventListener("pointerdown",event=>{if(!(event.target as Element).closest("button"))board.focus({preventScroll:true});});
   board.addEventListener("click",event=>{
     if((event.target as Element).closest("button")||dive.phase==="paused"||finished(dive))return;
     const bounds=ocean.getBoundingClientRect(),width=viewportWidth(ocean),camera=scene.camera();if(!bounds.width||!bounds.height)return;
@@ -277,6 +283,7 @@ function mount(host: HTMLElement): () => void {
     if(event.target instanceof HTMLTextAreaElement||event.altKey||event.ctrlKey||event.metaKey)return;
     if(event.target instanceof HTMLInputElement&&event.target.type!=="checkbox")return;
     const k=event.key.length===1?event.key.toLowerCase():event.key;
+    if(k===" "&&event.target!==board&&event.target!==document.body)return;
     if(k==="Escape"){event.preventDefault();if(!event.repeat)pause();return;}
     if(k==="f"||(event.target===fog&&k==="Enter")){event.preventDefault();if(!event.repeat){dive=setFog(dive,!dive.fog);renderHud();}return;}
     if(dive.phase==="paused")return;

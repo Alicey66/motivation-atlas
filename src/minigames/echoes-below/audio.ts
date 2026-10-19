@@ -33,7 +33,7 @@ export type AudioStatus = { enabled: boolean; running: boolean; available: boole
 export function createAudio(onStatus: (status: AudioStatus) => void) {
   let context: AudioContext | null = null, master: GainNode | null = null;
   let timer: ReturnType<typeof setInterval> | null = null;
-  let enabled = true, disposed = false, paused = false, scene: MusicScene = "explore", step = 0, nextTime = 0, scheduled = 0;
+  let enabled = false, disposed = false, paused = false, scene: MusicScene = "explore", step = 0, nextTime = 0, scheduled = 0;
   const voices = new Set<AudioScheduledSourceNode>();
   const cueTimes = new Map<string, number>();
   let noiseBuffer: AudioBuffer | null = null, lastEnemyCue = -10, lastMovement = -10, soundVoices = 0;
@@ -91,7 +91,7 @@ export function createAudio(onStatus: (status: AudioStatus) => void) {
     else voice({ midi: kind === "fire" ? 42 : 28, duration: kind==="fire"?.15:.24, volume: kind==="fire"?.13:.2, instrument: "kick" }, time);
   }
   /** Short, original enemy Foley. This never creates/resumes an audio context:
-   * callers must first unlock audio through the player's normal interaction. */
+   * the player must explicitly enable sound first. */
   function enemyCue(kind: EnemyKind, event: EnemyCueEvent, intensity: number): void {
     if (disposed || !enabled || paused || !context || !master || context.state !== "running" || !Number.isFinite(intensity)) return;
     const strength = Math.max(0, Math.min(1, intensity));
@@ -190,5 +190,6 @@ export function createAudio(onStatus: (status: AudioStatus) => void) {
     for (const oscillator of voices) { try { oscillator.stop(); } catch { /* already stopped */ } }
     voices.clear(); cueTimes.clear(); noiseBuffer = null; if (context) void context.close().catch(() => {}); context = null; master = null;
   }
+  report();
   return { unlock, setScene, effect, enemyCue, toggle, setPaused, dispose };
 }

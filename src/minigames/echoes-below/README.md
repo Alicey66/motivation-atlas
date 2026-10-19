@@ -2,9 +2,11 @@
 
 Motivator: Discovery.
 
+Author: Weihao-Zhou03
+
 ## Mechanic
 
-Explore a 30-by-20 sea, restore three beacons, and defeat the Leviathan. Move with WASD/arrows, aim with the mouse, and hold Space to fire forward. Q scans, R repairs, F toggles fog, and Escape pauses. On phones, use the left stick to move; hold and drag the right to aim and fire. Upgrades strengthen and evolve the submarine. Dodge enemy windups and use reefs as cover. With fog on, exploration and sonar reveal the sea. Disabling fog reveals the map, enemies, and items without changing AI, combat statistics, or loot: the switch changes access to information.
+Explore a 30-by-20 sea, restore three beacons, and defeat the Leviathan. With the viewport focused, move with WASD/arrows, aim with the mouse, and hold Space to fire. Q scans, R repairs, F toggles fog, and Escape pauses. On phones, the left stick moves; hold and drag the right to aim and fire. “Expand touch controls” optionally enlarges the game. Enable sound explicitly. Collect upgrades and use reefs as cover. With fog on, exploration and sonar reveal the sea. Disabling fog reveals the map, enemies, and items without changing AI, combat statistics, or loot: the switch changes access to information.
 
 ## Dynamic
 
