@@ -4,15 +4,15 @@ Motivator: Fantasy. Author: erica-ll.
 
 ## Mechanic
 
-Read three sticky notes, each with up to three messages between Maya and Livy. First, read them without names or dates and make your own sense of the disagreement. Use logic to figure out what happened to the couple based on pieces of evidence. Turn on **Show dates and who wrote each line** to reveal the chronology and who wrote each message; use the dates to put the notes in order. There is no correct interpretation to guess.
+Reconstruct Maya and Livy's week by arranging three sticky notes, each with two or three messages. The notes begin in Friday–Wednesday–Thursday order, without names or dates. Use the **Earlier** and **Later** buttons on each note to put the conversations in the order you think events happened. Then turn on **Reveal dates and who wrote each line** to compare your timeline with the dates and identify each speaker. The notes stay where you placed them, and there is no score or penalty for your interpretation.
 
 ## Dynamic
 
-In the playtest, Player A read the notes in their displayed order and tried to work out the speakers and chronology. They inferred that the first note belonged after the other two and linked speakers across the second and third notes, but needed to reveal the dates and names to resolve the remaining questions. The toggle helped them complete the reconstruction after an initial period of uncertainty and confirmed their guesses.
+In the earlier, reveal-only version, Player A inferred that the first displayed note belonged after the other two and connected speakers across the second and third notes, but needed the reveal to resolve the remaining questions. In this version, players can act on their timeline hypothesis by rearranging the notes before seeing the dates and speakers. A new playtest is needed to learn whether making and revising that order changes how they interpret the couple's story.
 
 ## Aesthetic
 
-Player A enjoyed guessing who was speaking and inferring the timeline before the information was shown. The toggle confirmed their deductions, leaving them satisfied with their own reasoning and with the feeling of having solved the puzzle. They described the game as overall relaxing and enjoyed its make-believe and immersive quality, saying the dialogue sounded like something a couple who care about each other might say during a conflict.
+In the earlier version, Player A enjoyed guessing who was speaking and inferring the timeline before the information was shown. The reveal confirmed their deductions; they described the game as relaxing and immersive, and said the dialogue sounded like something a couple who care about each other might say during a conflict. These observations are from before the player could arrange the notes, so a new playtest should check whether ordering them changes the player's sense of immersion, tension, or satisfaction.
 
 ## Sources
 

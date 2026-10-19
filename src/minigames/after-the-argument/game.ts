@@ -8,6 +8,14 @@ export interface StickyNote {
   lines: ConversationLine[];
 }
 
+export interface NoteView {
+  key: StickyNote["day"];
+  day: StickyNote["day"] | null;
+  lines: ConversationLine[];
+}
+
+export type NoteDirection = "earlier" | "later";
+
 export const NOTES: StickyNote[] = [
   {
     day: "Wednesday",
@@ -33,15 +41,22 @@ export const NOTES: StickyNote[] = [
   },
 ];
 
-export interface NoteView {
-  day: StickyNote["day"] | null;
-  lines: ConversationLine[];
+export function initialOrder(): StickyNote[] {
+  return [NOTES[2], NOTES[0], NOTES[1]];
 }
 
-/** The toggle changes how much context accompanies the same three conversations. */
-export function presentNotes(revealContext: boolean): NoteView[] {
-  const displayedNotes = [NOTES[2], NOTES[0], NOTES[1]];
-  return displayedNotes.map((note) => ({
+/** Move one note one position while preserving the other notes' relative order. */
+export function moveNote(notes: StickyNote[], index: number, direction: NoteDirection): StickyNote[] {
+  const destination = index + (direction === "earlier" ? -1 : 1);
+  if (index < 0 || index >= notes.length || destination < 0 || destination >= notes.length) return notes;
+  const moved = [...notes];
+  [moved[index], moved[destination]] = [moved[destination], moved[index]];
+  return moved;
+}
+
+export function presentNotes(notes: StickyNote[], revealContext: boolean): NoteView[] {
+  return notes.map((note) => ({
+    key: note.day,
     day: revealContext ? note.day : null,
     lines: note.lines,
   }));
