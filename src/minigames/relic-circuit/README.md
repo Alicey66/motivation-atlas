@@ -1,10 +1,11 @@
-# Lantern Trail
+# Relic Circuit
 
 Motivator: Discovery. Author: nc3244.
 
 ## Mechanic
 
-Collect three relics (*) and return to camp (C) within 36 successful moves.
+Deliver three relics (*) to camp (C) within 36 successful moves. Carry only
+one at a time; return to camp to unload before collecting another.
 You are @; # marks walls. Use direction buttons or focus a button and use
 arrow keys. Blocked moves cost nothing. Restart repeats the map. A round
 takes about one or two minutes.
@@ -16,7 +17,9 @@ move budget stay the same.
 
 ## Dynamic
 
-One other person played with fog on, then off. With fog on, they explored
+**Earlier-version playtest:** One other person played with fog on, then off,
+before the one-relic carrying limit was added. A playtest of the revised
+rule is still pending. With fog on, they explored
 dead ends and searched sections away from their first relic, assuming two
 relics would not be near one another. They collected all three and returned
 in 22 moves. With fog off, they planned a route to collect all three easily.
@@ -25,7 +28,7 @@ visibility with prior knowledge.
 
 ## Aesthetic
 
-With fog on, they felt a little helpless because they saw no clear strategy.
+In that earlier version, with fog on, they felt a little helpless because they saw no clear strategy.
 Without fog, they described the task as easier, with a route they could plan.
 Hidden information produced uncertainty here, but the reported feeling was
 helplessness rather than the curiosity the mechanic was intended to encourage.

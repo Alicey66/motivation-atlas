@@ -1,9 +1,0 @@
-.lantern-trail { max-width: 30rem; padding: 1rem; border: 1px solid currentColor; border-radius: .75rem; }
-.lantern-trail label { display: flex; align-items: center; gap: .6rem; }
-.lantern-trail input { min-width: 1.25rem; min-height: 1.25rem; }
-.lantern-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: .25rem; max-width: 21rem; margin: 1rem auto; }
-.lantern-cell { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid currentColor; border-radius: .3rem; font: bold 1.4rem monospace; }
-.lantern-hidden { opacity: .55; border-style: dashed; }
-.lantern-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; margin-bottom: .75rem; }
-.lantern-trail button { min-height: 44px; padding: .4rem; cursor: pointer; }
-.lantern-trail :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
