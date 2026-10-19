@@ -117,7 +117,7 @@ describe('glyph-adventure rules', () => {
       expect(isWater({ x: WIDTH - 1, y })).toBe(false);
     }
     const besideSnake = travel(state, { x: SAILOR.x, y: SNAKE.y });
-    expect(move(besideSnake, 'east').message).toBe('A giant serpent of 30 cubits, where his bear alone is two cubits. His body is covered in gold and eyebrows of lapis.');
+    expect(move(besideSnake, 'east').message).toBe('A giant serpent of 30 cubits, where his beard alone is two cubits. His body is covered in gold and eyebrows of lapis.');
     expect(move(besideSnake, 'east').position).toEqual(besideSnake.position);
   });
   it('banks and the crocodile block movement without spending moves', () => {
