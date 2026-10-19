@@ -36,7 +36,7 @@ it("runs ten trials, prevents repeat scoring, and resets for the other mode", ()
   const [start, lock] = host.querySelectorAll("button");
   const toggle = host.querySelector("input")!;
   start.click();
-  expect(toggle.disabled).toBe(true);
+  expect(toggle.disabled).toBe(false);
   vi.advanceTimersByTime(750);
   lock.click(); lock.click();
   expect(host.querySelector('[role="status"]')!.textContent).toContain("Hit!");
@@ -53,5 +53,29 @@ it("runs ten trials, prevents repeat scoring, and resets for the other mode", ()
   expect(host.textContent).toContain("target 36%");
   unmount();
   expect(host.childNodes).toHaveLength(0);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it("keeps mode changes pending until a mid-round restart", () => {
+  vi.useFakeTimers();
+  const host = document.createElement("div");
+  const unmount = signalKeeper.mount(host);
+  const start = host.querySelector("button")!;
+  const toggle = host.querySelector("input")!;
+  start.click();
+  expect(toggle.disabled).toBe(false);
+  toggle.click();
+  expect(toggle.checked).toBe(false);
+  vi.advanceTimersByTime(6000);
+  expect(host.textContent).toContain("target 42%");
+  start.click();
+  vi.advanceTimersByTime(6000);
+  expect(host.textContent).toContain("target 36%");
+  expect(vi.getTimerCount()).toBe(1);
+  toggle.click();
+  start.click();
+  vi.advanceTimersByTime(6000);
+  expect(host.textContent).toContain("target 42%");
+  unmount();
   expect(vi.getTimerCount()).toBe(0);
 });

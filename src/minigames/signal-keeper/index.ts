@@ -16,7 +16,6 @@ function mount(el: HTMLElement): () => void {
   const reflection = h("div", { class: "signal-reflection", hidden: true },
     h("h4", {}, "Check it against your own play"),
     h("p", {}, "What did you feel as the target changed? Did you wait longer, rush, or change your timing? Play again with the toggle off. Did a fixed target change the challenge or your satisfaction? Your experience may differ from the prediction."),
-    h("p", {}, "For the assignment: have another person play ON, then OFF. Record their scores, what they did, and their own words about each mode. Do not record their name."),
   );
   const root = h("div", { class: "signal-keeper" },
     h("label", {}, adaptive, " Adaptive difficulty (applies to the next round)"),
@@ -56,7 +55,6 @@ function mount(el: HTMLElement): () => void {
       running = false;
       clearInterval(timer);
       timer = undefined;
-      adaptive.disabled = false;
       lock.setAttribute("aria-disabled", "true");
       clock.textContent = "Round complete · 60 seconds";
       status.textContent = `${mode ? "Adaptive ON" : "Adaptive OFF"}: ${score}/${TRIALS} hits. Try the other mode and compare how it felt.`;
@@ -77,7 +75,6 @@ function mount(el: HTMLElement): () => void {
     began = performance.now();
     trial = 0; width = INITIAL_WIDTH; score = 0; attempt = null;
     mode = adaptive.checked; running = true; lastResult = "";
-    adaptive.disabled = true;
     history.replaceChildren();
     reflection.hidden = true;
     start.textContent = "Restart 60-second round";
