@@ -1,14 +1,28 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { drainNourishment, HUNGER_DRAIN_MULTIPLIER, rankScores } from "../src/minigames/golden-sprint/game";
+import { drainNourishment, rankScores, ROOM_DRAIN_RATES } from "../src/minigames/golden-sprint/game";
+import { goldenSprint } from "../src/minigames/golden-sprint";
 
 describe("Golden Sprint hunger toggle", () => {
-  it("stops passive nourishment loss without preventing explicit damage", () => {
-    expect(HUNGER_DRAIN_MULTIPLIER).toBe(3.6);
-    expect(drainNourishment(100, 5, true, 1.2)).toBe(78.4);
-    expect(drainNourishment(100, 5, false, 1.2)).toBe(100);
+  it("applies the room drain only when enabled and preserves explicit damage", () => {
+    expect(ROOM_DRAIN_RATES).toEqual([1.728, 2.448, 3.168, 3.888]);
+    expect(drainNourishment(100, 5, true, ROOM_DRAIN_RATES[0])).toBeCloseTo(91.36);
+    expect(drainNourishment(100, 5, false, ROOM_DRAIN_RATES[0])).toBe(100);
+    expect(drainNourishment(4, 5, true, ROOM_DRAIN_RATES[3])).toBe(0);
 
     const enemyDamage = 12;
-    expect(drainNourishment(100 - enemyDamage, 5, false, 1.2)).toBe(88);
+    expect(drainNourishment(100 - enemyDamage, 5, false, ROOM_DRAIN_RATES[0])).toBe(88);
+  });
+
+  it("injects the tested hunger rule and room rates into the playable platformer", () => {
+    const host = document.createElement("div");
+    const unmount = goldenSprint.mount(host);
+    const srcdoc = host.querySelector("iframe")?.getAttribute("srcdoc") ?? "";
+
+    expect(srcdoc).toContain("window.GoldenSprintRules");
+    expect(srcdoc).toContain("roomDrainRates:[1.728,2.448,3.168,3.888]");
+    expect(srcdoc).toContain("drainNourishment(game.health,dt,settings.drainHP,l.drain)");
+    unmount();
   });
 
   it("ranks leaderboard entries by points and then fastest time", () => {

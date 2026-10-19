@@ -1,5 +1,6 @@
 import { h } from "../../lib/dom";
 import type { Minigame } from "../types";
+import { drainNourishment, ROOM_DRAIN_RATES } from "./game";
 import platformerHtml from "./platformer/index.html?raw";
 import platformerCss from "./platformer/styles.css?raw";
 import platformerGame from "./platformer/game.js?raw";
@@ -29,11 +30,12 @@ function platformerDocument(): string {
     html, body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   `;
   const script = replaceAssets(platformerGame).replaceAll("</script", "<\\/script");
+  const rules = `<script>window.GoldenSprintRules={drainNourishment:${drainNourishment.toString()},roomDrainRates:${JSON.stringify(ROOM_DRAIN_RATES)}};</script>`;
   return platformerHtml
     .replace(/<link\b[^>]*>/gi, "")
     .replace(/<script\s+src="game\.js"><\/script>/i, "")
     .replace("</head>", `<style>${css}</style></head>`)
-    .replace("</body>", `<script>${script}</script></body>`);
+    .replace("</body>", `${rules}<script>${script}</script></body>`);
 }
 
 function mount(el: HTMLElement): () => void {

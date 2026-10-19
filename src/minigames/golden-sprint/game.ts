@@ -1,5 +1,5 @@
-/** Effective passive drain after easing the former 4x tuning by 10%. */
-export const HUNGER_DRAIN_MULTIPLIER = 3.6;
+/** Per-second hunger drain for each room, including the 10% comfort adjustment. */
+export const ROOM_DRAIN_RATES = [1.728, 2.448, 3.168, 3.888];
 
 export interface ScoreEntry {
   name: string;
@@ -14,5 +14,5 @@ export function rankScores<T extends ScoreEntry>(scores: T[]): T[] {
 
 export function drainNourishment(health: number, seconds: number, enabled: boolean, rate: number): number {
   if (!enabled) return health;
-  return Math.max(0, health - Math.max(0, seconds) * Math.max(0, rate) * HUNGER_DRAIN_MULTIPLIER);
+  return Math.max(0, health - Math.max(0, seconds) * Math.max(0, rate));
 }
