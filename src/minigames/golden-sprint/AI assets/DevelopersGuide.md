@@ -16,7 +16,7 @@
 ## 2. Design pillars
 
 1. **The myth is understandable.** Before the first dangerous section, players know who Midas is, what he wished for, why the wish is harmful, what happened to Marigold, and why the Pactolus matters.
-2. **Urgency without unfairness.** HP drains slow enough it Midas reaches tributary of river but not for him to waster time. Damage and hazards are clearly communicated.
+2. **Urgency without unfairness.** HP drains slowly enough for Midas to reach a tributary, but fast enough to discourage wasting time. Damage and hazards are clearly communicated.
 3. **The curse changes play.** On land the touch is powerful but food becomes gold. In tributaries Midas can eat, but cannot use the golden touch. The real river, not a tributary, ends the curse.
 4. **Enemies transform.** A successful land strike turns either enemy into a frozen, solid golden statue. The transformation is obvious and mechanically useful.
 5. **Readable, finished motion.** Player and enemy animations feel deliberate and grounded. A
@@ -107,7 +107,7 @@ This is not the ordinary game mode. It rapidly simulates a complete victory rout
 | A/D or Left/Right | Run left/right | Swim horizontally, with drag |
 | W, Up, or Space | Jump; pass upward through thin ledges | Swim upward; at the surface, deliberately launch toward ledges |
 | S or Down | Crouch | Dive / submerge |
-| J or left click | Forward golden strike | Disabled; explain touch suppression |
+| X or left click | Forward golden strike | Disabled; explain touch suppression |
 | E or right click | Turn bread into a golden brick | Eat bread and restore nourishment |
 | Escape / HUD pause | Pause or resume | Pause or resume |
 
@@ -429,7 +429,7 @@ Do not consider the game complete until these are verified in a browser.
 - [ ] Satyr is grounded, proportionate, smoothly animated, club visible, and never cropped/floating.
 - [ ] Harpy flies smoothly, has clean anatomy, and telegraphs a dodgeable projectile.
 - [ ] Only Satyr and Harpy appear as enemies.
-- [ ] J transforms both enemy types into frozen, fully gold, solid statues on land; water suppresses the transformation.
+- [ ] X transforms both enemy types into frozen, fully gold, solid statues on land; water suppresses the transformation.
 - [ ] Background is coherent and grounded; scenery does not float and geometry/hazards remain distinct.
 - [ ] River, spikes, wine, and checkpoints are easy to read.
 

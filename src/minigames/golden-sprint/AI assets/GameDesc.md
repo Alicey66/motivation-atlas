@@ -65,13 +65,13 @@ Input Key	Land Phase Action (Gold Active 🟡)	Water Phase Action (Cleansed 🔵
 A / D or ← / →	Move Left / Right	Swim Left / Right (Slower, drifting physics)
 W or Spacebar	Jump (Standard crisp platforming arc)	Surface (Swim upward toward air)
 S or ↓	Crouch (Drop down from thin platforms)	Dive (Submerge below projectile layers)
-J or Left-Click	Midas Strike (Melee punch to freeze monsters)	DISABLED (Midas flashes blue, unable to attack)
+X or Left-Click	Midas Strike (melee punch to freeze monsters)	DISABLED (Midas flashes blue, unable to attack)
 E or Right-Click	Spawn Golden Brick (Turns bread into a structural block)	Eat Bread (Stands still to consume and heal +25% HP)
 
 
 📱 Responsive Touch Interface
 
-For mobile browsers, a dynamic overlay updates in real-time. When isInWater changes to true, the browser event hooks replace the J Button style with a grayed-out padlock icon and morph the asset on the E Button from a solid brick into an animated green leaf.
+For mobile browsers, a dynamic overlay updates in real time. When isInWater changes to true, the browser event hooks replace the X button style with a grayed-out padlock icon and morph the E button's asset from a solid brick into an animated green leaf.
 
 ---
 

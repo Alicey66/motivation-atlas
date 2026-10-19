@@ -1,8 +1,8 @@
 import { h } from "../../lib/dom";
 import type { Minigame } from "../types";
-import legacyHtml from "./platformer/index.html?raw";
-import legacyCss from "./platformer/styles.css?raw";
-import legacyGame from "./platformer/game.js?raw";
+import platformerHtml from "./platformer/index.html?raw";
+import platformerCss from "./platformer/styles.css?raw";
+import platformerGame from "./platformer/game.js?raw";
 import "./golden-sprint.css";
 
 const ASSETS: Record<string, string> = {
@@ -22,14 +22,14 @@ function replaceAssets(source: string): string {
   return result;
 }
 
-function legacyDocument(): string {
-  const css = replaceAssets(legacyCss) + `
+function platformerDocument(): string {
+  const css = replaceAssets(platformerCss) + `
     label:has(#hp-toggle), label:has(#pause-hp-toggle),
     label:has(#sfx-toggle), label:has(#pause-sfx-toggle) { display: none !important; }
     html, body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   `;
-  const script = replaceAssets(legacyGame).replaceAll("</script", "<\\/script");
-  return legacyHtml
+  const script = replaceAssets(platformerGame).replaceAll("</script", "<\\/script");
+  return platformerHtml
     .replace(/<link\b[^>]*>/gi, "")
     .replace(/<script\s+src="game\.js"><\/script>/i, "")
     .replace("</head>", `<style>${css}</style></head>`)
@@ -89,7 +89,7 @@ function mount(el: HTMLElement): () => void {
 
   frame.addEventListener("load", syncSettings);
   hunger.addEventListener("change", syncSettings);
-  frame.srcdoc = legacyDocument();
+  frame.srcdoc = platformerDocument();
 
   return () => {
     expand.removeEventListener("click", toggleExpand);
@@ -103,7 +103,7 @@ function mount(el: HTMLElement): () => void {
 export const goldenSprint: Minigame = {
   slug: "golden-sprint",
   title: "Golden Sprint",
-  motivators: ["progress"],
+  motivators: ["challenge"],
   author: "JoshitaReddy",
   mount,
 };

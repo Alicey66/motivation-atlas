@@ -31,7 +31,7 @@ test/
 
 ## How to start and play
 
-1. Open the Atlas **Progress** page and scroll to **Play with it → Golden Sprint**.
+1. Open the Atlas **Challenge** page and scroll to **Play with it → Golden Sprint**.
 2. Set **Hunger drains over time** above the game. This is the mechanic to compare: enabled drain gradually increases across rooms; disabled drain stops passive loss. Enemy and hazard damage still applies either way.
 3. Inside the game, enter a runner name and select **Begin the Myth**. Read the short story by clicking, tapping, or pressing a key. Use **Skip story** if you want to start moving sooner.
 4. In the Rose Garden tutorial, keep the pinned control legend and current lesson visible as you learn. It stays on screen until you enter the next room. Then move through the four rooms, collect optional wine, touch checkpoints, and reach the River Pactolus. Room clears unlock the next room. If Midas falls, choose **Retry [room]** to try again from that room's entrance with the progress he had when he entered it.
@@ -46,7 +46,7 @@ The **Fast Walkthrough** option is a non-scoring demonstration for previewing ro
 - `index.ts` is the Atlas adapter. It exports the minigame, maps local images to the paths expected by the platformer, embeds the platformer HTML/CSS/JavaScript into an iframe, connects the Atlas hunger checkbox to the game, provides the expand-screen button, and cleans up its listeners and iframe on unmount.
 - `golden-sprint.css` styles the Atlas-facing wrapper, mechanic control, iframe, and fullscreen layout.
 - `game.ts` contains DOM-free helpers for the hunger-drain multiplier, nourishment calculation, and leaderboard ordering.
-- `README.md` is the player-facing minigame write-up rendered by the Atlas. It includes controls, the toggle mechanic, dynamics, aesthetics, and the cited course-note source. Its playtest observation placeholders need real player feedback before submission.
+- `README.md` is the player-facing minigame write-up rendered by the Atlas. It includes controls, the toggle mechanic, anonymous playtest actions and feelings, the cited Challenge source, and credits.
 - `platformer/index.html` defines the in-game screens and interface: title, story, HUD, controls, pause, room-complete, results, and leaderboard.
 - `platformer/styles.css` defines the platformer's visual presentation, animations, HUD, responsive layout, and touch controls.
 - `platformer/game.js` implements the playable game: movement, jumping, rooms, enemies, combat, hunger, water, pickups, checkpoints, score/time, leaderboard, and audio.
