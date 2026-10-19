@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mountMorning } from "../src/minigames/any-given-morning";
 import { chooseReply, take, type Session } from "../src/minigames/any-given-morning/game";
@@ -22,6 +23,8 @@ const frames = (ms: number) => vi.advanceTimersByTime(ms);
 function mount(reduced = false): void {
   vi.stubGlobal("matchMedia", () => ({ matches: reduced }));
   unmount = mountMorning(el, { seed: 38, onSession: (value) => { session = value; } });
+  // Vitest stubs CSS imports; load the shipped source for CSS regression checks.
+  el.querySelector("style")!.textContent = readFileSync("src/minigames/any-given-morning/style.css", "utf8");
 }
 function die(): void { session.life!.deathAt = session.life!.elapsed + 0.05; frames(2800); }
 
@@ -37,6 +40,45 @@ afterEach(() => {
 });
 
 describe("Any Given Morning browser mount", () => {
+  it("keeps touch controls hidden outside coarse pointers and preserves 48px coarse targets", () => {
+    mount();
+    const style = el.querySelector("style")!;
+    const rules = [...style.sheet!.cssRules];
+    const touchRules = rules.filter((rule): rule is CSSStyleRule =>
+      rule instanceof CSSStyleRule && rule.selectorText.split(",").some((selector) => selector.trim() === ".agm-touch"));
+    expect(touchRules.length).toBeGreaterThan(0);
+    for (const rule of touchRules) {
+      if (rule.style.display) expect(rule.style.display).toBe("none");
+    }
+    const coarse = rules.find((rule): rule is CSSMediaRule =>
+      rule instanceof CSSMediaRule && /\(pointer:\s*coarse\)/.test(rule.conditionText))!;
+    const grid = [...coarse.cssRules].find((rule): rule is CSSStyleRule =>
+      rule instanceof CSSStyleRule && rule.selectorText === ".agm-touch")!;
+    expect(grid.style.display).toBe("grid");
+    expect(grid.style.getPropertyValue("grid-template-columns")).toBe("repeat(3,48px) 1fr 56px");
+    expect(grid.style.getPropertyValue("grid-template-rows")).toBe("48px 48px");
+    const touch = el.querySelector<HTMLElement>(".agm-touch")!;
+    expect(touch.hidden).toBe(true);
+    get("start").click(); expect(touch.hidden).toBe(false);
+    session.life!.deathAt = 0.05; frames(100);
+    expect(state()).toBe("dying"); expect(touch.hidden).toBe(true);
+    die(); expect(touch.hidden).toBe(true);
+    const hidden = rules.find((rule): rule is CSSStyleRule =>
+      rule instanceof CSSStyleRule && rule.selectorText.includes(".agm-touch[hidden]"))!;
+    expect(hidden.style.display).toBe("none");
+  });
+
+  it("allows canvas scrolling except during play and dying", () => {
+    mount();
+    const rules = [...el.querySelector("style")!.sheet!.cssRules];
+    const touchActions = rules.filter((rule): rule is CSSStyleRule =>
+      rule instanceof CSSStyleRule && rule.selectorText.includes("canvas") && !!rule.style.getPropertyValue("touch-action"));
+    expect(touchActions.map((rule) => [rule.selectorText, rule.style.getPropertyValue("touch-action")])).toEqual([
+      [".agm canvas", "pan-y"],
+      ['.agm[data-state="play"] canvas, .agm[data-state="dying"] canvas', "none"],
+    ]);
+  });
+
   it("fades the quiet first-life hint at six seconds and keeps it outside live announcements", () => {
     mount(); expect(get("first-life-hint").hidden).toBe(true);
     get("start").click();
@@ -232,5 +274,24 @@ describe("Any Given Morning M4 controls", () => {
     get("start").click(); key("f"); await Promise.resolve();
     expect(request).toHaveBeenCalledTimes(2);
     expect(root.querySelectorAll("[data-mechanic]")).toHaveLength(0);
+  });
+
+  it("exits fallback full-window mode from DEAD and LEDGER with the same 44px toggle", async () => {
+    mount(); const root = get("any-given-morning");
+    Object.defineProperty(root, "requestFullscreen", { value: vi.fn().mockRejectedValue(new Error("refused")) });
+    get("start").click(); get("fullscreen").click();
+    await Promise.resolve(); await Promise.resolve();
+    die(); expect(state()).toBe("dead"); expect(root.classList.contains("agm-full-window")).toBe(true);
+    get("fullscreen").click(); await Promise.resolve();
+    expect(root.classList.contains("agm-full-window")).toBe(false);
+    for (let life = 1; life < 5; life++) { get("respawn").click(); die(); }
+    get("fullscreen").click(); await Promise.resolve(); await Promise.resolve();
+    get("respawn").click(); expect(state()).toBe("ledger");
+    expect(root.classList.contains("agm-full-window")).toBe(true);
+    const toggle = get("fullscreen");
+    expect(getComputedStyle(toggle).minHeight).toBe("44px");
+    expect(getComputedStyle(toggle).minWidth).toBe("44px");
+    toggle.click(); await Promise.resolve();
+    expect(root.classList.contains("agm-full-window")).toBe(false);
   });
 });
