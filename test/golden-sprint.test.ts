@@ -22,6 +22,11 @@ describe("Golden Sprint hunger toggle", () => {
     expect(srcdoc).toContain("window.GoldenSprintRules");
     expect(srcdoc).toContain("roomDrainRates:[1.728,2.448,3.168,3.888]");
     expect(srcdoc).toContain("drainNourishment(game.health,dt,settings.drainHP,l.drain)");
+    expect(srcdoc).not.toContain("fonts.googleapis.com");
+    expect(srcdoc).not.toContain("fonts.gstatic.com");
+    expect(srcdoc).toContain("cleanName(input.value)||'Midas'");
+    expect(host.textContent).toContain("Then check it against your own play");
+    expect(host.textContent).toContain("hunger drain on");
     unmount();
   });
 

@@ -7,14 +7,14 @@ import platformerGame from "./platformer/game.js?raw";
 import "./golden-sprint.css";
 
 const ASSETS: Record<string, string> = {
-  "assets/plot.jpg": new URL("./AI assets/plot.jpg", import.meta.url).href,
-  "assets/generated/cinematic-scenes.png": new URL("./AI assets/cinematic-scenes.png", import.meta.url).href,
-  "assets/generated/dionysus.png": new URL("./AI assets/dionysus.png", import.meta.url).href,
-  "assets/generated/harpy-flight-v2.png": new URL("./AI assets/harpy-flight-v2.png", import.meta.url).href,
-  "assets/generated/marigold-statue.png": new URL("./AI assets/marigold-statue.png", import.meta.url).href,
-  "assets/generated/midas-sprites.png": new URL("./AI assets/midas-sprites.png", import.meta.url).href,
-  "assets/generated/satyr-run-v4.png": new URL("./AI assets/satyr-run-v4.png", import.meta.url).href,
-  "assets/generated/wine-sprites-v2.png": new URL("./AI assets/wine-sprites-v2.png", import.meta.url).href,
+  "assets/plot.jpg": new URL("./assets/plot.jpg", import.meta.url).href,
+  "assets/generated/cinematic-scenes.png": new URL("./assets/cinematic-scenes.jpg", import.meta.url).href,
+  "assets/generated/dionysus.png": new URL("./assets/dionysus.webp", import.meta.url).href,
+  "assets/generated/harpy-flight-v2.png": new URL("./assets/harpy-flight-v2.webp", import.meta.url).href,
+  "assets/generated/marigold-statue.png": new URL("./assets/marigold-statue.webp", import.meta.url).href,
+  "assets/generated/midas-sprites.png": new URL("./assets/midas-sprites.webp", import.meta.url).href,
+  "assets/generated/satyr-run-v4.png": new URL("./assets/satyr-run-v4.webp", import.meta.url).href,
+  "assets/generated/wine-sprites-v2.png": new URL("./assets/wine-sprites-v2.webp", import.meta.url).href,
 };
 
 function replaceAssets(source: string): string {
@@ -55,6 +55,14 @@ function mount(el: HTMLElement): () => void {
     h("div", { class: "golden-port-toolbar" }, expand),
     frame,
     h("p", { class: "golden-port-focus" }, "Click or tap inside the game before using keyboard controls."),
+    h("section", { class: "golden-port-reflect" },
+      h("h4", {}, "Then check it against your own play"),
+      h("ul", {},
+        h("li", {}, "What did the run feel like with hunger drain on? What felt different with it off?"),
+        h("li", {}, "Did the drain change whether you explored for treasure, fought enemies, or rushed toward the river?"),
+        h("li", {}, "Which setting made the challenge feel tense, manageable, or frustrating—and why?"),
+      ),
+    ),
   );
   el.append(root);
 
