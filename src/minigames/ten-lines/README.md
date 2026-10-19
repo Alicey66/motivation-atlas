@@ -10,11 +10,11 @@ The toggle is **Rising difficulty**. On, pieces fall a fifth faster every 2 line
 
 ## Dynamic
 
-A classmate played one round with the toggle on, then one off. On, they topped out before ten lines: even the 0.8-second starting speed was hard for a new player, so the stack outran them before the speed-up built. Off, the speed held steady, yet completing rows with the shapes dealt stayed hard from the start, suggesting progress here comes through replay. The quoted item fits only partly: difficulty rose with progress, but began above this player's ability.
+A classmate played several rounds with the toggle on, then played with it off. On, their best rounds reached speed level 2 or 3, two to five lines, before the faster fall outran them; they improved across rounds but got little further. Off, the speed held steady, yet completing rows with the shapes dealt stayed hard from the start. The quoted item fits: difficulty rose with their progress, but faster than a new player's ability, so gains came only through replay.
 
 ## Aesthetic
 
-On, panic was the strongest feeling. Off, it felt like normal Tetris at an even speed, but still challenging. They preferred the toggle on, and said they would keep trying again and again until they could beat it.
+On, panic was the strongest feeling. Off, it felt like normal Tetris at an even speed, but still challenging. They preferred the toggle on, said they needed more time to improve, and would keep trying again and again until they could beat it.
 
 ## Sources
 
