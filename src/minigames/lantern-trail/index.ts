@@ -4,7 +4,7 @@ import { move, RELICS, SIZE, start, visible, type Direction } from './game';
 import './lantern-trail.css';
 
 function mount(el: HTMLElement): () => void {
-  let state = start(), playing = false, deadline = 0;
+  let state = start(), playing = false, deadline = 0, remainingSeconds = 90;
   let timer: ReturnType<typeof setInterval> | undefined;
   const fog = h('input', { type: 'checkbox', checked: true, 'data-mechanic': 'fog-of-war' });
   const status = h('p', { role: 'status', 'aria-live': 'polite' }, 'Choose fog on or off, then start exploring.');
@@ -22,7 +22,12 @@ function mount(el: HTMLElement): () => void {
     h('p', {}, 'Tab to the direction buttons and press Enter or Space, or use arrow keys while focused inside the game.'),
     h('aside', { class: 'lantern-reflect' }, h('strong', {}, 'Then check it against your own play'),
       h('p', {}, 'What did you feel? Did hiding the map change where you went or why? Try fog on, then off. Was replay easier because the map was visible, because you remembered it, or both?')));
-  function stop() { playing = false; clearInterval(timer); timer = undefined; }
+  function stop() {
+    if (playing) remainingSeconds = secondsLeft();
+    playing = false;
+    clearInterval(timer);
+    timer = undefined;
+  }
   function secondsLeft() { return Math.max(0, Math.ceil((deadline - Date.now()) / 1000)); }
   function render() {
     cells.forEach((cell, tile) => {
@@ -33,7 +38,7 @@ function mount(el: HTMLElement): () => void {
       cell.className = `${tile === state.position ? 'lantern-player' : shown ? 'lantern-seen' : ''}${collected ? ' lantern-collected' : ''}`;
     });
     board.setAttribute('aria-label', `Island map. You are at row ${Math.floor(state.position / SIZE) + 1}, column ${state.position % SIZE + 1}. ${fog.checked ? 'Unvisited tiles are hidden.' : 'All tiles are visible.'}`);
-    clock.textContent = `Round: ${deadline ? secondsLeft() : 90} seconds. Relics: ${state.collected.length} / 3.`;
+    clock.textContent = `Round: ${playing ? secondsLeft() : remainingSeconds} seconds. Relics: ${state.collected.length} / 3.`;
     buttons.forEach(button => button.setAttribute('aria-disabled', String(!playing)));
   }
   function expire() {

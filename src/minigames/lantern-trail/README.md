@@ -4,18 +4,16 @@ Motivator: Discovery. Author: Rezhao.
 
 ## Mechanic
 
-Explore a six-by-six island and collect three relics within ninety seconds.
-Press Start round, then use the direction buttons or arrow keys while focused
-inside the game. The @ marks you; a diamond marks an uncollected relic.
-Stepping onto a relic collects it automatically; its diamond stays with a
-checkmark so you can see where you found it. There are no enemies or
-penalties for revisiting ground. The round ends when you collect all three
-relics or time runs out.
+Collect three relics on a six-by-six island within ninety seconds.
+Press Start round, then use direction buttons or arrow keys while focused
+inside the game. The @ marks you; diamonds mark relics. Stepping onto one
+collects it, leaving a checkmarked diamond. Revisiting ground has no penalty.
+The round ends when you collect all three or time runs out.
 
-The single Fog of war checkbox hides unvisited tiles behind question marks.
-Turn it off to reveal the whole island immediately. Movement, relic locations,
-and the time limit stay the same. Restart uses the same island. Try fog on
-first, then off, and notice whether exploration becomes route planning.
+Fog of war hides unvisited tiles behind question marks. You can toggle it
+mid-round to reveal the island or re-hide unvisited tiles. Movement, relic
+locations, and the time limit stay the same. Restart uses the same island.
+Try fog on, then off: does exploration become route planning?
 
 ## Dynamic
 
@@ -36,6 +34,9 @@ knowing the answers, which made it less interesting.
 
 The Discovery section describes hidden information revealed bit by bit,
 which “seems to provoke curiosity” (Malone 1980, p. 67).
+It also describes fog of war, where “the strategic unveiling of hidden
+information adds suspense and tension” (Salen and Zimmerman 2003, ch. 17,
+“Hiding and Revealing Systems”).
 
 Built with Codex using the Atlas template. I kept Codex's suggestion to reuse
 the island for comparison. No outside art, sound, or additional code was borrowed.
