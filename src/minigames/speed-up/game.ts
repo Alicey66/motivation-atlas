@@ -20,7 +20,7 @@ export const ROUND_MS = 45_000;
 export const START_WINDOW = 1100;
 export const MIN_WINDOW = 320;
 /** With escalation on, each hit multiplies the window by this. */
-export const SPEED_UP = 0.9;
+export const SPEED_UP = 0.95;
 
 export function nextWindow(window: number, escalation: boolean): number {
   if (!escalation) return window;

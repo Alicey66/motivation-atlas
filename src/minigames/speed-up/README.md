@@ -4,7 +4,7 @@ Motivator: Sensation. Author: joshuahkung.
 
 ## Mechanic
 
-One of nine cells lights up. Tap it (or press its number, 1 to 9) before it jumps somewhere else. A hit scores; a wrong tap or a missed target costs one of three lives. The round ends after 45 seconds or three misses. The toggle is **Escalation**: on, the target stays lit 10% less time after every hit; off, it stays at the same speed all round.
+One of nine cells lights up. Tap it (or press its number, 1 to 9) before it jumps somewhere else. A hit scores; a wrong tap or a missed target costs one of three lives. The round ends after 45 seconds or three misses. The toggle is **Escalation**: on, the target stays lit 5% less time after every hit; off, it stays at the same speed all round.
 
 ## Dynamic
 
