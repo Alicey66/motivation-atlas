@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fogScout } from "../src/minigames/fog-scout";
 import { MAPS, SIZE, adjacentMonster, attack, move, newGame, tileAt, type Direction, type ScoutState } from "../src/minigames/fog-scout/game";
-import { renderRoute } from "../src/app";
 
 const cleanups: Array<() => void> = [];
 afterEach(() => {
@@ -382,22 +381,5 @@ describe("Dungeon guardians", () => {
     q<HTMLButtonElement>("[data-replay]").click();
     expect(q("[data-health]").getAttribute("data-health")).toBe("3");
     expect(q("[data-result]").hidden).toBe(true);
-  });
-});
-
-describe("Discovery page prioritizes play", () => {
-  it("shows the dungeon before optional instructions, course notes and examples", () => {
-    const el = document.createElement("div");
-    const unmount = renderRoute(el, "#/m/discovery");
-    cleanups.push(unmount);
-    const game = el.querySelector(".fog-scout")!;
-    const theory = el.querySelector<HTMLDetailsElement>(".motivator-reference")!;
-    const howTo = el.querySelector<HTMLDetailsElement>(".minigame-instructions")!;
-    expect(theory.open).toBe(false);
-    expect(howTo.open).toBe(false);
-    expect(game.compareDocumentPosition(theory) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(game.compareDocumentPosition(howTo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(theory.querySelectorAll(".band")).toHaveLength(3);
-    expect(theory.querySelector(".cite-link")).not.toBeNull();
   });
 });

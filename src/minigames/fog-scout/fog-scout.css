@@ -34,7 +34,7 @@
 .fog-scout[data-outcome="lost"] .fs-end-card { border-color: #b77b74; color: #ffd6c2; }
 .fs-map-label { display: flex; justify-content: space-between; gap: 8px; margin: 0 2px 8px; color: var(--fs-muted); font: 500 .64rem var(--mono); }
 .fs-map-name { color: var(--fs-gold); }
-.fs-board { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; padding: 6px; background: #080f15; border: 3px solid #3b4b56; border-radius: 3px; box-shadow: 0 0 0 1px #0a0f14, 0 5px 0 #090f14; cursor: crosshair; }
+.fs-board { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; padding: 6px; background: #080f15; border: 3px solid #3b4b56; border-radius: 3px; box-shadow: 0 0 0 1px #0a0f14, 0 5px 0 #090f14; cursor: default; }
 .fs-cell { position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; isolation: isolate; border: 1px solid #25313b; background: #293943; user-select: none; }
 .fs-cell::before { content: ""; position: absolute; inset: 3px; border-top: 2px solid #354650; border-left: 2px solid #31414c; border-bottom: 2px solid #1d2a34; z-index: -1; }
 .fs-cell:nth-child(3n) { background-color: #2d3d46; }
