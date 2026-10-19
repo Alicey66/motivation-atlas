@@ -10,17 +10,17 @@ Space or Enter. Ten trials last six seconds each, with one attempt per
 trial. Hits earn one point; misses and skipped attempts earn nothing.
 
 With the toggle on, a hit narrows the next target by six percentage points;
-a miss widens it by six, within limits of 12% and 60%. With it off, the
+a miss widens it by six, within limits of 3% and 60%. With it off, the
 target stays 36% wide. Speed, round length, and scoring stay identical.
 Restart resets everything. Change modes between rounds.
 
 ## Dynamic
 
-Playtest pending. Have another person play with adaptation on, then off.
-Record both scores and when they locked, hesitated, or changed strategy.
-Replace this paragraph with observations. The prediction is that shrinking
-targets invite precise timing; widening after misses offers recovery.
-This is a hypothesis, not evidence.
+One other player scored 6/10 with adaptation on and 10/10 with it off,
+using the earlier 12% minimum. The difference is consistent with narrower
+targets making hits harder, but scores alone do not show their strategy.
+Behavior observations are still pending. After this playtest, the minimum
+was lowered to 3%; this revised version has not yet been playtested.
 
 ## Aesthetic
 

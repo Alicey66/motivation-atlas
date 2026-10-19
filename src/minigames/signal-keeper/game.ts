@@ -10,7 +10,7 @@ export function markerPosition(elapsed: number): number {
 export function isHit(position: number, width: number): boolean {
   return Math.abs(position - 50) <= width / 2;
 }
-/** Only adaptive mode changes the target; misses undo one success step. */
+/** Only adaptive mode changes the target; misses widen it for recovery. */
 export function nextWidth(width: number, hit: boolean, adaptive: boolean): number {
-  return adaptive ? Math.max(12, Math.min(60, width + (hit ? -6 : 6))) : INITIAL_WIDTH;
+  return adaptive ? Math.max(3, Math.min(60, width + (hit ? -6 : 6))) : INITIAL_WIDTH;
 }

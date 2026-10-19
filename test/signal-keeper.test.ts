@@ -10,7 +10,12 @@ it("adaptation narrows after success and widens after failure; off stays fixed",
   expect(nextWidth(30, false, true)).toBe(INITIAL_WIDTH);
   expect(nextWidth(INITIAL_WIDTH, true, false)).toBe(INITIAL_WIDTH);
   expect(nextWidth(INITIAL_WIDTH, false, false)).toBe(INITIAL_WIDTH);
-  expect(nextWidth(12, true, true)).toBe(12);
+  expect(nextWidth(12, true, true)).toBe(6);
+  expect(nextWidth(6, true, true)).toBe(3);
+  expect(nextWidth(3, true, true)).toBe(3);
+  expect(nextWidth(3, false, true)).toBe(9);
+  expect(isHit(52, 6)).toBe(true);
+  expect(isHit(52, 3)).toBe(false);
   expect(nextWidth(60, false, true)).toBe(60);
   expect(isHit(66, INITIAL_WIDTH)).toBe(true);
   expect(isHit(66, nextWidth(INITIAL_WIDTH, true, true))).toBe(false);
