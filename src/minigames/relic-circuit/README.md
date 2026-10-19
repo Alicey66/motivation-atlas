@@ -6,9 +6,8 @@ Motivator: Discovery. Author: nc3244.
 
 Deliver three relics (*) to camp (C) within 36 successful moves. Carry only
 one at a time; return to camp to unload before collecting another.
-You are @; # marks walls. Use direction buttons or focus a button and use
-arrow keys. Blocked moves cost nothing. Restart repeats the map. A round
-takes about one or two minutes.
+You are @; # marks walls. Use direction buttons or focus a button and press
+arrow keys. Blocked moves cost nothing. Restart repeats the map.
 
 With **Fog of war** checked, your tile and its immediate neighbors are
 revealed; explored tiles stay visible. Question marks conceal unexplored
@@ -17,21 +16,19 @@ move budget stay the same.
 
 ## Dynamic
 
-**Earlier-version playtest:** One other person played with fog on, then off,
-before the one-relic carrying limit was added. A playtest of the revised
-rule is still pending. With fog on, they explored
-dead ends and searched sections away from their first relic, assuming two
-relics would not be near one another. They collected all three and returned
-in 22 moves. With fog off, they planned a route to collect all three easily.
-Repeating the map may also have helped: the second round combined full
-visibility with prior knowledge.
+One other person retested the revised one-relic carrying rule with fog on,
+then off, and reported the same behavior. With fog on, they
+explored dead ends and searched away from their first relic, assuming two
+relics would not be near one another. With fog off, they planned a route
+to deliver all three easily. No new move count was recorded.
+Prior experience with the map may also have helped the comparison.
 
 ## Aesthetic
 
-In that earlier version, with fog on, they felt a little helpless because they saw no clear strategy.
-Without fog, they described the task as easier, with a route they could plan.
-Hidden information produced uncertainty here, but the reported feeling was
-helplessness rather than the curiosity the mechanic was intended to encourage.
+The retest produced the same reported feelings: with fog on, they felt a
+little helpless because there was no clear strategy. Without fog, the task
+felt easier because they could plan a route. Hidden information produced
+helplessness rather than the intended curiosity.
 
 ## Sources
 
