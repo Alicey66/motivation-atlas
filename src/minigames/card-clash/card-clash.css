@@ -10,3 +10,10 @@
 .card-clash button:hover:enabled { border-color: var(--accent); }
 .clash-log { padding-left: 24px; font-size: .85rem; max-height: 220px; overflow-y: auto; }
 .clash-log li { margin-bottom: 8px; }
+
+.clash-mode { color: var(--muted); }
+.clash-unavailable { color: var(--warn); }
+.clash-reflect { border-left: 3px solid var(--aes); padding-left: 12px; }
+.card-clash details { margin-block: 16px; }
+.card-clash summary { cursor: pointer; min-height: 44px; }
+.card-clash [data-discards], .card-clash [data-revealed] { overflow-wrap: anywhere; }

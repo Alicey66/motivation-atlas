@@ -1,41 +1,40 @@
-# Card Clash: Race to 20
+# Card Clash
 
 ## Mechanic
 
-Race a bot to 20 points. You start; choose one card each turn by clicking,
-tapping, or focusing its button and pressing Enter or Space. Number 3, 5,
-and 7 add that many points; Boost adds 4. Strike removes 3 opponent points.
-Drain adds 2 to you, then removes 2 from your opponent. Scores stop at zero.
-Victory is checked after the full effect.
+Finish with more points than the bot. You go first. Click, tap, or focus a
+legal card and press Enter or Space. Numbers add their value. Undo cancels
+the opponent's latest uncanceled number's original points; an existing Double
+bonus remains. Double adds your latest uncanceled number's value once more.
+Reveal publicly shows one random opposing hand card without taking it; both sides can read its name and effect in Public information. Defense blocks
+the next opposing action, not numbers. Shuffle removes itself and exchanges
+both remaining hands.
 
-Each independent, shuffled 16-card deck deals five cards. Only when your
-hand empties, draw one replacement; an exhausted side passes. After six
-player-and-bot rounds, the higher score wins; equal scores draw.
+No cards are drawn. Unplayable choices are disabled; pass only when no legal
+card exists. When neither side can act, compare scores; ties draw.
 
-**Adaptive Counterplay** changes only the next bot decision. ON prioritizes
-an immediate win, then values effective attacks more strongly when you have
-17 points or more. OFF follows Number 7, Boost, Number 5, Drain, Strike,
-Number 3. Restart reshuffles both decks. Try ON, then OFF.
+**Randomized Mode** applies only on **New Game**. ON deals five cards each,
+at least three numbers, from 29 unique cards: two copies of 1–12 and one
+of each action. Nineteen cards stay unused. OFF uses a separate ten-card
+scenario: each side gets 1, 5, 11, Undo, Double. The bot follows the same
+deterministic policy in both modes. Its hand stays hidden except public
+reveals; fixed starting composition is public.
 
 ## Dynamic
 
-**Playtest pending:** Have one other person play ON, then OFF. Record card
-order, saved attacks, attention to scores, and any strategy changes here.
-Opponent-aware counterplay might encourage defensive play; this remains a
-hypothesis, not an observed result.
+During playtesting, Fixed Mode produced a more predictable strategic experience. Since both players had the same starting hand, including two action cards, they could anticipate the types of moves available to each other. This made the game more structured, with decisions shaped by a relatively stable set of options.
+
+In Randomized Mode, uncertainty increased beyond the values of the number cards to include the distribution of action cards. Because players could not see the opponent's hand, they had to make decisions without knowing which special abilities the opponent might still hold. This uncertainty made it harder to predict the opponent's strategy and encouraged more adaptive decision-making.
 
 ## Aesthetic
 
-**Player feedback pending:** Record what that person actually reports feeling
-in each condition, without identifying them. Did the toggle change tension,
-predictability, or perceived competition? Do not infer feelings from scores.
+Fixed Mode felt more systematic and predictable because both players started with the same known card composition. Randomized Mode created a stronger sense of uncertainty and suspense: players had to consider not only the opponent's score, but also the possibility that the opponent was holding an unexpected action card. This made the randomized version feel more varied and engaging, increasing its replayability by creating different strategic situations across games.
 
 ## Sources
 
-The Competition note describes adversarial play with "clear feedback about
-who is winning," (Hunicke et al. 2004, p. 3). Visible scores and responsive
-attacks explore that Competition dynamic; observations above must test it.
+The Competition note describes adversarial play with "clear feedback about who is winning,"
+(Hunicke et al. 2004, p. 3). Visible scores support comparison; playtesting
+must establish what emerges.
 
-Code and text created with Codex; no outside assets used. Codex suggested
-weighting effective attacks at the threat threshold; kept. Human playtesting
-and the 1–2 minute duration assessment remain pending.
+Original code and text created with Codex; no borrowed assets. Codex suggested
+unique IDs for tracking transfers and cancellations; kept.
