@@ -102,4 +102,4 @@ function mount(el: HTMLElement): () => void {
   render();
   return () => { if (timer !== null) clearTimeout(timer); root.remove(); };
 }
-export const cardClash: Minigame = { slug: "card-clash", title: "Card Clash", motivators: ["competition"], author: "Annniway026", mount };
+export const cardClash: Minigame = { slug: "card-clash", title: "Card Clash", motivators: ["chance"], author: "Annniway026", mount };

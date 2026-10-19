@@ -234,7 +234,8 @@ describe("Atlas interface", () => {
     return { el, unmount, toggle, restart, playFirst };
   }
   it("registers and exposes exactly one mechanic; mode changes apply only to a new game", () => {
-    expect(minigamesFor("competition")).toContain(cardClash);
+    expect(minigamesFor("chance")).toContain(cardClash);
+    expect(minigamesFor("competition")).not.toContain(cardClash);
     const { el, unmount, toggle, restart } = mount();
     expect(el.querySelectorAll("[data-mechanic]")).toHaveLength(1);
     const hand = el.querySelector(".clash-hand")!.textContent;

@@ -28,7 +28,7 @@ describe("minigames on a motivator page", () => {
   it("show how to play above the game and what it demonstrates below", () => {
     const root = document.createElement("div");
     renderRoute(root, "#/m/chance");
-    const game = root.querySelector(".minigame")!;
+    const game = root.querySelector(".pig")!.closest(".minigame")!;
     const howTo = game.querySelector(".minigame-howto")!;
     expect(howTo.textContent).toContain("How to play");
     expect(howTo.textContent).toContain("A roll of 1 wipes out your turn total");
