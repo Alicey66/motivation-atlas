@@ -16,17 +16,15 @@ move budget stay the same.
 
 ## Dynamic
 
-One other person retested the revised one-relic carrying rule with fog on,
-then off, and reported the same behavior. With fog on, they
-explored dead ends and searched away from their first relic, assuming two
+One other person played with fog on, then off. With fog on, they explored dead ends and searched away from their first relic, assuming two
 relics would not be near one another. They delivered all three in 28 moves
 with fog on. With fog off, they planned a route to deliver all three easily.
-Prior experience with the map may also have helped the comparison.
+Playing the same map in both settings may also have helped route planning
+in the second round.
 
 ## Aesthetic
 
-The retest produced the same reported feelings: with fog on, they felt a
-little helpless because there was no clear strategy. Without fog, the task
+With fog on, they reported feeling a little helpless because there was no clear strategy. Without fog, the task
 felt easier because they could plan a route. Hidden information produced
 helplessness rather than the intended curiosity.
 
