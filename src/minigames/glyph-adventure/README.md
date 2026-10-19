@@ -30,7 +30,7 @@ felt overwhelming.
 
 ## Sources
 
-My game demonstrates that "hidden information revealed bit by bit" (Salen and Zimmerman 2003, ch. 17) seems to "provoke curiosity"  (Malone 1980, p. 67). As shown by the playtester, who delayed finishing the game to 'collect them all' and reveal all parts of the map, gradually revealing information can inspire someone to explore a lot more than giving them everything all at once at the get-go. 
+My game demonstrates that "the strategic unveiling of hidden information adds suspense and tension" (Salen and Zimmerman 2003, ch. 17) seems to "provoke curiosity"  (Malone 1980, p. 67). As shown by the playtester, who delayed finishing the game to 'collect them all' and reveal all parts of the map, gradually revealing information can inspire someone to explore a lot more than giving them everything all at once at the get-go. 
 
 
 I used **Codex** to develop the rules, interface, and tests. I was inspired by [Word Game](https://wordgame.cc/) and its  character-grid presentation; and decided to adapt it to a more logographic writing system, hieroglyphs. I kept Codex's suggestion of a making the end goal be about taking a shipwrecked sailor back home (but modified to include shipwrecked sailor references). I rejected its original "journal" system that only stated the items you saw (and not the items you didn't see), and also reported menial things like "a crocodile blocked your way." The bundled [NewGardiner font](https://github.com/nederhof/newgardiner)
