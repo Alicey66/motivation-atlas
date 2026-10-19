@@ -95,6 +95,6 @@ function mount(el: HTMLElement): () => void {
   return () => root.remove();
 }
 export const glyphAdventure: Minigame = {
-  slug: 'glyph-adventure', title: 'glyph-adventure', motivators: ['discovery'],
-  author: 'Student (with Codex)', mount,
+  slug: 'glyph-adventure', title: 'Glyph Adventure', motivators: ['discovery'],
+  author: 'anonymousanemone', mount,
 };

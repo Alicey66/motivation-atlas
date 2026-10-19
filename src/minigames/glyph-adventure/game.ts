@@ -170,7 +170,7 @@ export function move(state: Game, direction: Direction): Game {
   if (!canEnter(next)) return { ...state, message: same(next, CROCODILE)
     ? 'The crocodile holds this passage. Explore another branch to go around.'
     : same(next, SNAKE)
-      ? 'A giant serpent of 30 cubits, where his bear alone is two cubits. His body is covered in gold and eyebrows of lapis.'
+      ? 'A giant serpent of 30 cubits, where his beard alone is two cubits. His body is covered in gold and eyebrows of lapis.'
     : PLANTS.some((p) => same(p.point, next))
       ? `A ${SIGNS[encountered].name} grows on the land here. Your boat needs water; you cannot pass onto land.`
       : 'Land. Your boat needs water; you cannot pass onto land.' };

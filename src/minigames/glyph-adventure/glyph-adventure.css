@@ -1,7 +1,7 @@
 @font-face {
   font-family: 'Glyph NewGardiner';
   src: url('./NewGardiner.ttf') format('truetype');
-  font-display: swap;
+  font-display: block;
 }
 .glyph-adventure {
   --glyph-water: #9fc0cf;
