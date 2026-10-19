@@ -39,7 +39,7 @@ export function newGame(options: SpeedUpOptions, random: () => number = Math.ran
 
 function miss(s: SpeedUpState, random: () => number): SpeedUpState {
   const misses = s.misses + 1;
-  return { ...s, misses, over: misses >= LIVES, target: pickCell(s.target, random) };
+  return { ...s, misses, over: s.over || misses >= LIVES, target: pickCell(s.target, random) };
 }
 
 /** The player tapped a cell. A hit scores and, with escalation on, speeds the target up; a wrong cell costs a life. */
@@ -52,7 +52,10 @@ export function tap(s: SpeedUpState, cell: number, random: () => number = Math.r
 /** The target's window ran out before the player tapped it: a life lost, and the clock runs down. */
 export function expire(s: SpeedUpState, random: () => number = Math.random): SpeedUpState {
   if (s.over) return s;
-  return miss(tick(s, s.window), random);
+  const ticked = tick(s, s.window);
+  // The clock ran out while this target was lit: the round ends on time, with no life lost.
+  if (ticked.over) return ticked;
+  return miss(ticked, random);
 }
 
 /** Run the round clock down. */

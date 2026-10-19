@@ -1,4 +1,4 @@
-# Speed-up: escalation
+# Speed-up grid: escalation
 
 Motivator: Sensation. Author: joshuahkung.
 

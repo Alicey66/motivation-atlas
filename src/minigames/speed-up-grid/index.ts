@@ -1,7 +1,7 @@
 import { h } from "../../lib/dom";
 import type { Minigame } from "../types";
 import { CELLS, LIVES, ROUND_MS, expire, newGame, tap, tick, type SpeedUpOptions, type SpeedUpState } from "./game";
-import "./speed-up.css";
+import "./speed-up-grid.css";
 
 /** Quoted exactly from the Sensation section of the note. */
 export const ESCALATION =
@@ -13,6 +13,7 @@ function mount(el: HTMLElement): () => void {
   let started = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let litAt = 0;
+  let clockTimer: ReturnType<typeof setInterval> | null = null;
 
   const escalation = h("input", { type: "checkbox", "data-mechanic": "escalation", checked: true });
   const hits = h("span", { class: "su-num", "data-hits": "" }, "0");
@@ -79,9 +80,22 @@ function mount(el: HTMLElement): () => void {
     timer = null;
   }
 
+  // Re-render the seconds every 100 ms so the clock reads as a countdown between taps.
+  function stopClock(): void {
+    if (clockTimer !== null) clearInterval(clockTimer);
+    clockTimer = null;
+  }
+  function startClock(): void {
+    stopClock();
+    clockTimer = setInterval(() => {
+      if (state.over) { stopClock(); return; }
+      clock.textContent = String(Math.ceil(Math.max(0, state.timeLeft - (Date.now() - litAt)) / 1000));
+    }, 100);
+  }
+
   function schedule(): void {
     stop();
-    if (state.over) return;
+    if (state.over) { stopClock(); return; }
     litAt = Date.now();
     timer = setTimeout(() => {
       timer = null;
@@ -100,28 +114,35 @@ function mount(el: HTMLElement): () => void {
   }
 
   cells.forEach((c, i) => c.addEventListener("click", () => press(i)));
-  root.addEventListener("keydown", (e) => {
+  // Listen on document so number keys work without first clicking into the game; removed on unmount.
+  function onKey(e: KeyboardEvent): void {
+    if (!started || state.over || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target instanceof Element && e.target.closest("input, textarea, select")) return;
     const n = Number(e.key);
     if (Number.isInteger(n) && n >= 1 && n <= CELLS) { e.preventDefault(); press(n - 1); }
-  });
+  }
+  document.addEventListener("keydown", onKey);
   startBtn.addEventListener("click", () => {
     options = { escalation: escalation.checked };
     state = newGame(options);
     started = true;
     render();
     schedule();
+    startClock();
   });
 
   render();
   return () => {
     stop();
+    stopClock();
+    document.removeEventListener("keydown", onKey);
     root.remove();
   };
 }
 
-export const speedUp: Minigame = {
-  slug: "speed-up",
-  title: "Speed-up: escalation",
+export const speedUpGrid: Minigame = {
+  slug: "speed-up-grid",
+  title: "Speed-up grid: escalation",
   motivators: ["sensation"],
   author: "joshuahkung",
   mount,
